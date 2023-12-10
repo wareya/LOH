@@ -28,17 +28,17 @@ Name | Size | Compress time | Decompress time
 -|-|-|-
 data/cc0_photo.tga | 3728 KB | - | -
 data/cc0_photo.tga.loh | 2774 KB | 0.114s | 0.047s
-data/cc0_photo.tga.l0d3.loh | 2223 KB | *0.044s* | 0.052s
+data/cc0_photo.tga.l0d3.loh | 2223 KB | **0.044s** | 0.052s
 data/cc0_photo.tga.-5.gz | 2473 KB | 0.166s | 0.033s
 data/cc0_photo.tga.-9.gz | 2466 KB | 0.264s | 0.029s
 data/cc0_photo.tga.-5.lz4 | 2777 KB | 0.113s | 0.013s
-data/cc0_photo.tga.-9.lz4 | 2753 KB | 0.167s | *0.012s*
+data/cc0_photo.tga.-9.lz4 | 2753 KB | 0.167s | **0.012s**
 data/cc0_photo.tga.-19.zst | 2328 KB | 0.985s | 0.018s
-data/cc0_photo.tga.-11.br | *2069 KB* | 12.02s | 0.039s
+data/cc0_photo.tga.-11.br | **2069 KB** | 12.02s | 0.039s
 -|-|-|-
 data/blake recorded 11.wav | 27002 KB | - | -
-data/blake recorded 11.wav.loh | 26134 KB | *0.608s* | 0.286s
-data/blake recorded 11.wav.d4.loh | *24464 KB* | 0.626s | 0.274s
+data/blake recorded 11.wav.loh | 26134 KB | **0.608s** | 0.286s
+data/blake recorded 11.wav.d4.loh | **24464 KB** | 0.626s | 0.274s
 data/blake recorded 11.wav.-5.gz | 25920 KB | 0.856s | 0.187s
 data/blake recorded 11.wav.-9.gz | 25910 KB | 1.124s | 0.186s
 data/blake recorded 11.wav.-5.lz4 | 26404 KB | 0.683s | 0.075s
@@ -47,51 +47,51 @@ data/blake recorded 11.wav.-19.zst | 26130 KB | 8.528s | 0.036s
 data/blake recorded 11.wav.-11.br | 25268 KB | 90.319s | 0.308s
 -|-|-|-
 data/moby dick.txt | 1246 KB | - | -
-data/moby dick.txt.loh | 633 KB | *0.055s* | 0.015s
+data/moby dick.txt.loh | 633 KB | **0.055s** | 0.015s
 data/moby dick.txt.-5.gz | 508 KB | 0.066s | 0.01s
 data/moby dick.txt.-9.gz | 499 KB | 0.126s | 0.016s
 data/moby dick.txt.-5.lz4 | 591 KB | 0.057s | 0.006s
-data/moby dick.txt.-9.lz4 | 583 KB | 0.08s | *0.005s*
+data/moby dick.txt.-9.lz4 | 583 KB | 0.08s | **0.005s**
 data/moby dick.txt.-19.zst | 412 KB | 0.658s | 0.006s
-data/moby dick.txt.-11.br | *403 KB* | 2.286s | 0.008s
+data/moby dick.txt.-11.br | **403 KB** | 2.286s | 0.008s
 -|-|-|-
 data/oops all zeroes.bin | 27002 KB | - | -
 data/oops all zeroes.bin.loh | 462 Bytes | 0.128s | 0.095s
 data/oops all zeroes.bin.-5.gz | 26 KB | 0.133s | 0.13s
 data/oops all zeroes.bin.-9.gz | 26 KB | 0.134s | 0.135s
 data/oops all zeroes.bin.-5.lz4 | 106 KB | 0.034s | 0.042s
-data/oops all zeroes.bin.-9.lz4 | 106 KB | *0.027s* | 0.033s
-data/oops all zeroes.bin.-19.zst | 866 Bytes | 0.044s | *0.01s*
-data/oops all zeroes.bin.-11.br | *27 Bytes* | 0.564s | 0.096s
+data/oops all zeroes.bin.-9.lz4 | 106 KB | **0.027s** | 0.033s
+data/oops all zeroes.bin.-19.zst | 866 Bytes | 0.044s | **0.01s**
+data/oops all zeroes.bin.-11.br | **27 Bytes** | 0.564s | 0.096s
 -|-|-|-
-data/white noise.bin | *27002 KB* | - | -
-data/white noise.bin.loh | 27006 KB | *0.526s* | 0.177s
+data/white noise.bin | **27002 KB** | - | -
+data/white noise.bin.loh | 27006 KB | **0.526s** | 0.177s
 data/white noise.bin.-5.gz | 27006 KB | 0.785s | 0.168s
 data/white noise.bin.-9.gz | 27006 KB | 0.789s | 0.156s
 data/white noise.bin.-5.lz4 | 27002 KB | 0.678s | 0.071s
 data/white noise.bin.-9.lz4 | 27002 KB | 0.679s | 0.066s
-data/white noise.bin.-19.zst | 27003 KB | 8.508s | *0.033s*
+data/white noise.bin.-19.zst | 27003 KB | 8.508s | **0.033s**
 data/white noise.bin.-11.br | 27002 KB | 45.611s | 0.066s
 -|-|-|-
 data/Godot_v4.1.3-stable_win64.exe | 117559 KB | - | -
-data/Godot_v4.1.3-stable_win64.exe.loh | 63348 KB | *2.809s* | 1.23s
+data/Godot_v4.1.3-stable_win64.exe.loh | 63348 KB | **2.809s** | 1.23s
 data/Godot_v4.1.3-stable_win64.exe.-5.gz | 54154 KB | 3.786s | 0.757s
 data/Godot_v4.1.3-stable_win64.exe.-9.gz | 53650 KB | 10.596s | 0.743s
 data/Godot_v4.1.3-stable_win64.exe.-5.lz4 | 60631 KB | 2.201s | 0.355s
-data/Godot_v4.1.3-stable_win64.exe.-9.lz4 | 60210 KB | 3.792s | *0.346s*
+data/Godot_v4.1.3-stable_win64.exe.-9.lz4 | 60210 KB | 3.792s | **0.346s**
 data/Godot_v4.1.3-stable_win64.exe.-19.zst | 45147 KB | 63.875s | 0.293s
-data/Godot_v4.1.3-stable_win64.exe.-11.br | *42549 KB* | 375.979s | 0.736s
+data/Godot_v4.1.3-stable_win64.exe.-11.br | **42549 KB** | 375.979s | 0.736s
 -|-|-|-
 data/unifont-jp.tga | 65537 KB | - | -
-data/unifont-jp.tga.loh | 2972 KB | *0.361s* | 0.211s
+data/unifont-jp.tga.loh | 2972 KB | **0.361s** | 0.211s
 data/unifont-jp.tga.-5.gz | 2223 KB | 0.549s | 0.226s
 data/unifont-jp.tga.-9.gz | 1492 KB | 16.121s | 0.194s
 data/unifont-jp.tga.-5.lz4 | 4679 KB | 0.651s | 0.131s
 data/unifont-jp.tga.-9.lz4 | 2715 KB | 4.765s | 0.134s
-data/unifont-jp.tga.-19.zst | 1258 KB | 21.154s | *0.079s*
-data/unifont-jp.tga.-11.br | *1055 KB* | 153.957s | 0.131s
+data/unifont-jp.tga.-19.zst | 1258 KB | 21.154s | **0.079s**
+data/unifont-jp.tga.-11.br | **1055 KB** | 153.957s | 0.131s
 
-\* LZ4 has a maximum compression ratio of 1:256-ish (because of how it stores long integers)
+(LZ4 has a maximum compression ratio of 1:256-ish, because of how it stores long integers.)
 
 ## Format
 
