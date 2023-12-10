@@ -43,7 +43,7 @@ data/blake recorded 11.wav.-5.gz | 25920 KB | 0.856s | 0.187s
 data/blake recorded 11.wav.-9.gz | 25910 KB | 1.124s | 0.186s
 data/blake recorded 11.wav.-5.lz4 | 26404 KB | 0.683s | 0.075s
 data/blake recorded 11.wav.-9.lz4 | 26375 KB | 0.783s | 0.069s
-data/blake recorded 11.wav.-19.zst | 26130 KB | 8.528s | 0.036s
+data/blake recorded 11.wav.-19.zst | 26130 KB | 8.528s | **0.036s**
 data/blake recorded 11.wav.-11.br | 25268 KB | 90.319s | 0.308s
 -|-|-|-
 data/moby dick.txt | 1246 KB | - | -
