@@ -370,11 +370,11 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
     
     loh_hashmap hashmap;
     
-    hashmap.hashtable = malloc(sizeof(uint64_t) * hash_capacity);
+    hashmap.hashtable = (uint64_t *)malloc(sizeof(uint64_t) * hash_capacity);
     if (!hashmap.hashtable)
         return ret;
     
-    hashmap.hashtable_i = malloc(sizeof(uint8_t) * hash_i_capacity);
+    hashmap.hashtable_i = (uint8_t *)malloc(sizeof(uint8_t) * hash_i_capacity);
     if (!hashmap.hashtable_i)
         return ret;
     
