@@ -8,10 +8,16 @@ int main(int argc, char ** argv)
 {
     if (argc < 4 || (argv[1][0] != 'z' && argv[1][0] != 'x'))
     {
-        puts("usage: loh (z|x) <in> <out> [0|1] [0|1] [number]");
+        puts("usage: loh (z[0-9]|x) <in> <out> [0|1] [0|1] [number]");
         puts("");
-        puts("z: compresses <in> into <out>");
+        puts("z[1-9]: compresses <in> into <out>");
         puts("x: decompresses <in> into <out>");
+        puts("");
+        puts("The z argument takes an optional number from 1 to 9, controlling\n"
+            "compression quality. 1 means fastest compression, 9 means slowest.\n"
+            "This number is directly next to the z, like `loh z5 [etc]`.\n"
+            "The default compression quality is 2.\n"
+            "Higher compression levels take up more memory.");
         puts("");
         puts("The three numeric arguments at the end are for z (compress) mode.");
         puts("");
@@ -76,7 +82,7 @@ int main(int argc, char ** argv)
     }
     else if (argv[1][0] == 'x')
     {
-        buf.data = loh_decompress(buf.data, buf.len, &buf.len, 0);
+        buf.data = loh_decompress(buf.data, buf.len, &buf.len, 1);
         
         if (buf.data)
         {

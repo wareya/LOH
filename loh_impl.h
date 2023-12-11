@@ -865,11 +865,7 @@ static loh_byte_buffer lookback_decompress(const uint8_t * input, size_t input_l
     }
     
 #define _LOH_CHECK_I_VS_LEN_OR_RETURN(N) \
-    if (i + N > input_len)\
-    {\
-        *error = 1;\
-        return ret;\
-    }
+    if (i + N > input_len) return *error = 1, ret;
 
     while (i < input_len)
     {
@@ -1010,7 +1006,7 @@ static loh_byte_buffer huff_unpack(loh_bit_buffer * buf, int * error)
     }
     
     // reserve 8 extra bytes because we might write extra garbage bytes at the end
-    // (we do this to avoid having to spend a branch jumping out of a loop)
+    // (we do this to avoid having to spend a branch jumping out of the inner decoding loop)
     bytes_reserve(&ret, output_len + 8);
     
     if (!ret.data)
@@ -1019,6 +1015,7 @@ static loh_byte_buffer huff_unpack(loh_bit_buffer * buf, int * error)
         return ret;
     }
     
+    uint8_t * out_data = ret.data;
     uint8_t * in_data = buf->buffer.data;
     size_t in_data_len = buf->buffer.len;
     size_t i = 0;
@@ -1028,23 +1025,26 @@ static loh_byte_buffer huff_unpack(loh_bit_buffer * buf, int * error)
     for (size_t j = buf->byte_index; j < in_data_len; j++)
     {
         // operating on bit buffer input bytes/words is faster than operating on individual input bits
-        uint16_t word = in_data[j];
+        uint8_t word = in_data[j];
         for (uint8_t b = 0; b < 8; b += 1)
         {
             code_word = code_word | (word & 1);
             word >>= 1;
             if (code_word < *max_code++)
             {
-                ret.data[i++] = symbols[code_word];
+                out_data[i++] = symbols[code_word];
                 code_word = 0;
                 max_code = max_codes + 1;
             }
-            code_word <<= 1;
+            else
+                code_word <<= 1;
         }
+        if (i >= output_len)
+            break;
      }
-
+     
     ret.len = output_len;
-
+    
 #undef _LOH_PROCESS_WORD
     
     return ret;
