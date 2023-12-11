@@ -8,20 +8,21 @@ int main(int argc, char ** argv)
 {
     if (argc < 4 || (argv[1][0] != 'z' && argv[1][0] != 'x'))
     {
-        puts("usage: loh (z[0-9]|x) <in> <out> [0|1] [0|1] [number]");
+        puts("usage: loh (z[0-9]|x) <in> <out> [0-9] [0|1] [number]");
         puts("");
-        puts("z[1-9]: compresses <in> into <out>");
+        puts("z: compresses <in> into <out>");
         puts("x: decompresses <in> into <out>");
-        puts("");
-        puts("The z argument takes an optional number from 1 to 9, controlling\n"
-            "compression quality. 1 means fastest compression, 9 means slowest.\n"
-            "This number is directly next to the z, like `loh z5 [etc]`.\n"
-            "The default compression quality is 2.\n"
-            "Higher compression levels take up more memory.");
         puts("");
         puts("The three numeric arguments at the end are for z (compress) mode.");
         puts("");
-        puts("The first turns on lookback.");
+        puts("The first turns on lookback, with different numbers corresponding to\n"
+            "different compression qualities. The default value is 4, which is\n"
+            "pretty low quality but fast enough to be reasonable. 1 means fastest,\n"
+            "9 means slowest. Increasing the compression level by 1 makes the lookback\n"
+            "compressor use double the extra memory of the previous compression level.\n"
+            "At level 4, it uses around 147 kilobytes of extra memory (default).\n"
+            "At level 9, it uses around 34 megabytes of extra memory.\n"
+            );
         puts("");
         puts("The second turns on Huffman coding.");
         puts("");
@@ -54,17 +55,17 @@ int main(int argc, char ** argv)
     if (argv[1][0] == 'z')
     {
         uint8_t do_diff = 0;
-        uint8_t do_rle = 1;
+        uint8_t do_lookback = 4;
         uint8_t do_huff = 1;
         
         if (argc > 4)
-            do_rle = strtol(argv[4], 0, 10);
+            do_lookback = strtol(argv[4], 0, 10);
         if (argc > 5)
             do_huff = strtol(argv[5], 0, 10);
         if (argc > 6)
             do_diff = strtol(argv[6], 0, 10);
         
-        buf.data = loh_compress(buf.data, buf.len, do_rle, do_huff, do_diff, &buf.len);
+        buf.data = loh_compress(buf.data, buf.len, do_lookback, do_huff, do_diff, &buf.len);
         
         FILE * f2 = fopen(argv[3], "wb");
         
