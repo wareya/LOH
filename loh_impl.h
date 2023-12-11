@@ -345,7 +345,8 @@ static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const uin
             (dist <= 0x1FFF ? 2 :
             (dist <= 0xFFFFF ? 3 :
             (dist <= 0x7FFFFF ? 4 : 5)));
-        overhead += 1;
+        overhead += 1; // size byte for size <= 0x7F
+        // don't need to account for the size > 0x7F case because overhead will always be smaller than size then
         
         if (overhead < size)
         {
@@ -362,10 +363,8 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
         quality_level = 9;
     uint8_t hash_size = 13 + (quality_level + 1) / 2;
     uint8_t hash_shl = quality_level / 2;
-    printf("using hash config: %d %d\n", hash_size, hash_shl);
     size_t hash_capacity = 1 << (hash_size + hash_shl);
     size_t hash_i_capacity = 1 << hash_size;
-    printf("hashmap overhead (bytes): %lld\n", sizeof(uint64_t) * hash_capacity + hash_i_capacity);
     
     loh_byte_buffer ret = {0, 0, 0};
     
