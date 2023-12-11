@@ -312,8 +312,13 @@ static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_
 // bits within lookback header byte (which spends 2 bits on length extension bits)
 static const size_t loh_size_bits = 3;
 static const size_t loh_size_mask = (1 << loh_size_bits) - 1;
-static const size_t loh_dist_bits = 6 - loh_size_bits;
+static const size_t loh_dist_bits = 7 - loh_size_bits;
 static const size_t loh_dist_mask = (1 << loh_dist_bits) - 1;
+
+static const size_t loh_size_bits_ext = 1;
+static const size_t loh_size_mask_ext = (1 << loh_size_bits_ext) - 1;
+static const size_t loh_dist_bits_ext = 7 - loh_size_bits_ext;
+static const size_t loh_dist_mask_ext = (1 << loh_dist_bits_ext) - 1;
 
 static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const size_t i, const uint8_t * input, const uint64_t input_len, const uint8_t final, uint64_t * out_size)
 {
@@ -437,25 +442,24 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
                 
                 //printf("%lld\t%lld\n", write_size, dist);
                 
-                uint8_t head_byte = 0;
+                uint8_t head_byte = write_size > loh_size_mask || dist > loh_dist_mask;
                 
-                head_byte |= ((write_size & loh_size_mask) << 1) | (write_size > loh_size_mask ? 1 : 0);
+                head_byte |= (write_size & loh_size_mask) << 1;
                 write_size >>= loh_size_bits;
                 
-                head_byte |= ((dist & loh_dist_mask) << (loh_size_bits + 2)) | (dist > loh_dist_mask ? 1 << (loh_size_bits + 1) : 0);
+                head_byte |= (dist & loh_dist_mask) << (loh_size_bits + 1);
                 dist >>= loh_dist_bits;
                 
                 byte_push(&ret, head_byte);
                 
-                while (write_size > 0)
+                while (write_size > 0 || dist > 0)
                 {
-                    byte_push(&ret, ((write_size & 0x7F) << 1) | (write_size > 0x7F));
-                    write_size >>= 7;
-                }
-                while (dist > 0)
-                {
-                    byte_push(&ret, ((dist & 0x7F) << 1) | (dist > 0x7F));
-                    dist >>= 7;
+                    uint8_t byte = write_size > loh_size_mask_ext || dist > loh_dist_mask_ext;
+                    byte |= (write_size & loh_size_mask_ext) << 1;
+                    byte |= (dist & loh_dist_mask_ext) << (loh_size_bits_ext + 1);
+                    byte_push(&ret, byte);
+                    write_size >>= loh_size_bits_ext;
+                    dist >>= loh_dist_bits_ext;
                 }
                 
                 // advance cursor and update hashmap
@@ -495,16 +499,17 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
         
         size_t write_size = size - 1;
         
-        uint8_t head_byte = 0;
-        head_byte |= ((write_size & loh_size_mask) << 1) | (write_size > loh_size_mask ? 1 : 0);
+        uint8_t head_byte = ((write_size & loh_size_mask) << 1) | (write_size > loh_size_mask);
+        write_size >>= loh_size_bits;
         
         byte_push(&ret, head_byte);
         
-        write_size >>= loh_size_bits;
         while (write_size)
         {
-            byte_push(&ret, ((write_size & 0x7F) << 1) | (write_size > 0x7F));
-            write_size >>= 7;
+            uint8_t byte = write_size > loh_size_mask_ext;
+            byte |= (write_size & loh_size_mask_ext) << 1;
+            write_size >>= loh_size_bits_ext;
+            byte_push(&ret, byte);
         }
         
         bytes_push(&ret, &input[i], size);
@@ -904,31 +909,23 @@ static loh_byte_buffer lookback_decompress(const uint8_t * input, size_t input_l
     while (i < input_len)
     {
         uint8_t dat = input[i++];
-        
-        uint8_t size_continues = dat & 1;
+        uint8_t continues = dat & 1;
         size_t size = (dat >> 1) & loh_size_mask;
+        size_t dist = (dat >> (loh_size_bits + 1)) & loh_dist_mask;
         
-        uint8_t dist_continues = dat & (1 << (loh_size_bits + 1));
-        size_t dist = (dat >> (loh_size_bits + 2)) & loh_dist_mask;
-        
-        uint64_t n = loh_size_bits;
-        while (size_continues)
+        uint64_t n_size = loh_size_bits;
+        uint64_t n_dist = loh_dist_bits;
+        while (continues)
         {
             _LOH_CHECK_I_VS_LEN_OR_RETURN(1)
             uint64_t cont_dat = input[i++];
-            size_continues = cont_dat & 1;
-            size += ((cont_dat >> 1) << n);
-            n += 7;
-        }
-        
-        n = loh_dist_bits;
-        while (dist_continues)
-        {
-            _LOH_CHECK_I_VS_LEN_OR_RETURN(1)
-            uint64_t cont_dat = input[i++];
-            dist_continues = cont_dat & 1;
-            dist += ((cont_dat >> 1) << n);
-            n += 7;
+            continues = cont_dat & 1;
+            
+            size += ((cont_dat >> 1) & loh_size_mask_ext) << n_size;
+            dist += ((cont_dat >> (loh_size_bits_ext + 1)) & loh_dist_mask_ext) << n_dist;
+            
+            n_size += loh_size_bits_ext;
+            n_dist += loh_dist_bits_ext;
         }
         
         // lookback mode
