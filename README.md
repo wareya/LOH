@@ -10,8 +10,6 @@ LOH is meant to be embedded into other applications, not used as a general purpo
 
 LOH is good for applications that have to compress lots of data quickly, especially images, and also for applications that need a single-header compression library.
 
-LOH can be modified to compress more aggressively at the cost of performance, but even then, it usually doesn't perform as well on non-image/audio files as `zip` does. To make it more aggressive, change LOH_HASH_SIZE to 16 and LOH_HASHTABLE_KEY_SHL to a number greater than 2 (usually 3, 4, or 5; increasing it has an exponential cost, both in time and memory usage).
-
 This project compiles cleanly both as C and C++ code without warnings or errors. Requires C99 or C++11 or newer.
 
 Not fuzzed. However, the compressor is probably perfectly safe, and the decompressor is probably safe on trusted/correct data.
