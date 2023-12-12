@@ -14,7 +14,7 @@ This project compiles cleanly both as C and C++ code without warnings or errors.
 
 Not fuzzed. However, the compressor is probably perfectly safe, and the decompressor is probably safe on trusted/correct data.
 
-\* Around 850 lines of actual code according to `cloc`. The file itself is over 1k lines because it's well-commented.
+\* Around 880 lines of actual code according to `cloc`. The file itself is over 1k lines because it's well-commented.
 
 ## Comparison
 
