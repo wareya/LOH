@@ -419,6 +419,21 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
                 exit(-1);
             }
             
+            // advance cursor and update hashmap
+            uint64_t start_i = i;
+            i += 1;
+            uint64_t temp_loc = 0;
+            uint64_t temp_size = 0;
+            for (size_t j = 1; j < found_size; j++)
+            {
+                if (i + LOH_HASH_LENGTH < input_len)
+                    hashmap_insert(&hashmap, &input[i], i);
+                i += 1;
+            }
+            if (start_i + LOH_HASH_LENGTH < input_len)
+                hashmap_insert(&hashmap, &input[start_i], start_i);
+            
+            
             size_t write_size = found_size - loh_min_lookback_length;
             
             uint8_t head_byte = 0;
@@ -468,26 +483,22 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
                 dist >>= 7;
             }
             
-            // advance cursor and update hashmap
-            size_t start_i = i;
-            i += 1;
-            for (size_t j = 1; j < found_size; ++j)
-            {
-                if (i + LOH_HASH_LENGTH < input_len)
-                    hashmap_insert(&hashmap, &input[i], i);
-                i += 1;
-            }
-            if (start_i + LOH_HASH_LENGTH < input_len)
-                hashmap_insert(&hashmap, &input[start_i], start_i);
-            
             found_size = 0;
+            
+            if (temp_size)
+            {
+                found_loc = temp_loc;
+                found_size = temp_size;
+                continue;
+            }
         }
         
         // store a literal if we found no lookback
-        size_t size = 0;
+        uint64_t size = 0;
         while (i + size < input_len)
         {
-            found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size == 0, &found_size);
+            if (i + size + LOH_HASH_LENGTH < input_len)
+                found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size == 0, &found_size);
             if (found_size != 0)
                 break;
             // need to update the hashmap mid-literal
