@@ -201,23 +201,29 @@ static const size_t loh_min_lookback_length = 4;
 // collisions and identical matches share eviction; the number of values per hash is static
 
 typedef struct {
-    // table of hash (hashed four bytes) to value (address in file)
-    // we have 2<<n cells per hash
-    uint64_t * hashtable;
-    // overwriting cursor
-    uint8_t * hashtable_i;
+    uint64_t value;
+    uint32_t next;
+    uint32_t prev;
+} loh_hash_link;
+
+typedef struct {
+    // table of hash (hashed four bytes) to index into link buffer
+    uint32_t * hashtable;
+    // link buffer, contains hash chain links
+    loh_hash_link * hashtable_links;
+    // number of links in the link table
+    // when old links are overwritten, the link from their previous link is severed
+    // must be a power of 2
+    uint32_t hash_link_count;
+    // index under which to add next hash link
+    uint32_t hash_link_next;
     // size of the hash function output in bits.
     // must be at most 32, but values significantly above 16 are a Bad Idea.
     // higher values take up exponentially more memory.
     // default: 15
     uint8_t hash_size;
-    // log2 of the number of values per key (0 -> 1 value per key, 1 -> 2, 2 -> 4, 3 -> 8, 4 -> 16, etc)
-    // higher values are slower, but result in smaller files. 8 is the max.
-    // higher values take up exponentially more memory and are exponentially slower.
-    // default: 2
-    uint8_t hash_shl;
-    uint16_t hash_i_max;
-    uint16_t hash_i_mask;
+    // maximum distance that the hash chain is allowed to be followed
+    uint8_t hash_chain_length;
 } loh_hashmap;
 
 #define LOH_HASH_LENGTH 4
@@ -239,34 +245,37 @@ static inline uint32_t hashmap_hash(loh_hashmap * hashmap, const uint8_t * bytes
 // bytes must point to four characters
 static inline void hashmap_insert(loh_hashmap * hashmap, const uint8_t * bytes, uint64_t value)
 {
-    const uint32_t key_i = hashmap_hash(hashmap, bytes);
-    const uint32_t key = key_i << hashmap->hash_shl;
+    const uint32_t key = hashmap_hash(hashmap, bytes);
     
-    hashmap->hashtable[key + hashmap->hashtable_i[key_i]] = value;
-    hashmap->hashtable_i[key_i] = (hashmap->hashtable_i[key_i] + 1) & hashmap->hash_i_mask;
+    hashmap->hashtable_links[hashmap->hash_link_next].value = value;
+    hashmap->hashtable_links[hashmap->hash_link_next].next = hashmap->hashtable[key];
+    hashmap->hashtable[key] = hashmap->hash_link_next;
+    hashmap->hash_link_next = (hashmap->hash_link_next + 1) & (hashmap->hash_link_count - 1);
 }
 
 // bytes must point to four characters and be inside of buffer
 static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_t * buffer, const size_t buffer_len, uint64_t * min_len)
 {
     const uint8_t * bytes = &buffer[i];
-    const uint32_t key_i = hashmap_hash(hashmap, bytes);
-    const uint32_t key = key_i << hashmap->hash_shl;
+    const uint32_t key = hashmap_hash(hashmap, bytes);
     
     // look for match within key
     uint64_t best = -1;
     uint64_t best_size = loh_min_lookback_length - 1;
-    for (uint16_t j = 0; j < hashmap->hash_i_max; j++)
+    size_t limit = 0;
+    size_t first = hashmap->hashtable[key];
+    for (uint32_t j = hashmap->hashtable[key]; j != 0xFFFFFFFF && limit < hashmap->hash_chain_length; j = hashmap->hashtable_links[j].next)
     {
-        // cycle from newest to oldest
-        int n = (hashmap->hashtable_i[key_i] + hashmap->hash_i_max - 1 - j) & hashmap->hash_i_mask;
-        const uint64_t value = hashmap->hashtable[key + n];
+        const uint64_t value = hashmap->hashtable_links[j].value;
         
         if (value >= i)
             break;
+        if (limit > 0 && j == first)
+            break;
+        limit += 1;
         
-        // early-out for things that can't possibly be an (efficient) match
-        if (bytes[0] != buffer[value] || bytes[1] != buffer[value + 1] || bytes[2] != buffer[value + 2])
+        // early-out for things that can't possibly be a (good) match
+        if (bytes[0] != buffer[value] || bytes[1] != buffer[value + 1])
             continue;
         
         // find longest match
@@ -352,7 +361,7 @@ static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const siz
 
 static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_len, int8_t quality_level)
 {
-    uint8_t hash_size = 13;
+    uint8_t hash_size = 12;
     uint8_t hash_shl = 0;
     if (quality_level > 15)
         quality_level = 15;
@@ -368,28 +377,29 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
         quality_level += 1;
         hash_size += quality_level;
     }
-    size_t hash_capacity = ((size_t)1) << (hash_size + hash_shl);
-    size_t hash_i_capacity = ((size_t)1) << hash_size;
+    printf("%d %d\n", hash_size, hash_shl);
+    size_t hash_capacity = ((size_t)1) << hash_size;
+    size_t hash_link_capacity = ((size_t)1) << (hash_size + 6);
     
     loh_byte_buffer ret = {0, 0, 0};
     
     loh_hashmap hashmap;
     
-    hashmap.hashtable = (uint64_t *)malloc(sizeof(uint64_t) * hash_capacity);
+    hashmap.hashtable = (uint32_t *)malloc(sizeof(uint32_t) * hash_capacity);
     if (!hashmap.hashtable)
         return ret;
     
-    hashmap.hashtable_i = (uint8_t *)malloc(sizeof(uint8_t) * hash_i_capacity);
-    if (!hashmap.hashtable_i)
+    hashmap.hashtable_links = (loh_hash_link *)malloc(sizeof(loh_hash_link) * hash_link_capacity);
+    if (!hashmap.hashtable_links)
         return ret;
     
+    hashmap.hash_link_count = hash_link_capacity;
+    hashmap.hash_link_next = 0;
     hashmap.hash_size = hash_size;
-    hashmap.hash_shl = hash_shl;
-    hashmap.hash_i_max = (1 << hash_shl);
-    hashmap.hash_i_mask = (1 << hash_shl) - 1;
+    hashmap.hash_chain_length = (1 << hash_shl) + 1;
     
-    memset(hashmap.hashtable, 0, sizeof(uint64_t) * hash_capacity);
-    memset(hashmap.hashtable_i, 0, sizeof(uint8_t) * hash_i_capacity);
+    memset(hashmap.hashtable, 0xFF, sizeof(uint32_t) * hash_capacity);
+    memset(hashmap.hashtable_links, 0xFF, sizeof(loh_hash_link) * hash_link_capacity);
     
     byte_push(&ret, input_len & 0xFF);
     byte_push(&ret, (input_len >> 8) & 0xFF);
@@ -406,6 +416,7 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
     uint64_t found_loc = 0;
     while (i < input_len)
     {
+        //printf("%d\n", i);
         // check for lookback hit
         if (found_size != 0)
         {
@@ -426,6 +437,7 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
             uint64_t temp_size = 0;
             for (size_t j = 1; j < found_size; j++)
             {
+                //printf("wah %d\n", j);
                 if (i + LOH_HASH_LENGTH < input_len)
                     hashmap_insert(&hashmap, &input[i], i);
                 i += 1;
@@ -497,6 +509,7 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
         uint64_t size = 0;
         while (i + size < input_len)
         {
+            //printf("asdfwerg %d\n", size);
             if (i + size + LOH_HASH_LENGTH < input_len)
                 found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size == 0, &found_size);
             if (found_size != 0)
