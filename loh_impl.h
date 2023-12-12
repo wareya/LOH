@@ -216,8 +216,8 @@ typedef struct {
     // higher values take up exponentially more memory and are exponentially slower.
     // default: 2
     uint8_t hash_shl;
-    uint8_t hash_max;
-    uint8_t hash_mask;
+    uint16_t hash_i_max;
+    uint16_t hash_i_mask;
 } loh_hashmap;
 
 #define LOH_HASH_LENGTH 4
@@ -243,7 +243,7 @@ static inline void hashmap_insert(loh_hashmap * hashmap, const uint8_t * bytes, 
     const uint32_t key = key_i << hashmap->hash_shl;
     
     hashmap->hashtable[key + hashmap->hashtable_i[key_i]] = value;
-    hashmap->hashtable_i[key_i] = (hashmap->hashtable_i[key_i] + 1) & hashmap->hash_mask;
+    hashmap->hashtable_i[key_i] = (hashmap->hashtable_i[key_i] + 1) & hashmap->hash_i_mask;
 }
 
 // bytes must point to four characters and be inside of buffer
@@ -256,10 +256,10 @@ static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_
     // look for match within key
     uint64_t best = -1;
     uint64_t best_size = loh_min_lookback_length - 1;
-    for (uint8_t j = 0; j < hashmap->hash_max; j++)
+    for (uint16_t j = 0; j < hashmap->hash_i_max; j++)
     {
         // cycle from newest to oldest
-        int n = (hashmap->hashtable_i[key_i] + hashmap->hash_max - 1 - j) & hashmap->hash_mask;
+        int n = (hashmap->hashtable_i[key_i] + hashmap->hash_i_max - 1 - j) & hashmap->hash_i_mask;
         const uint64_t value = hashmap->hashtable[key + n];
         
         if (value >= i)
@@ -382,8 +382,8 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
         quality_level = 15;
     uint8_t hash_size = 13 + (quality_level + 1) / 2;
     uint8_t hash_shl = quality_level / 2;
-    size_t hash_capacity = 1 << (hash_size + hash_shl);
-    size_t hash_i_capacity = 1 << hash_size;
+    size_t hash_capacity = ((size_t)1) << (hash_size + hash_shl);
+    size_t hash_i_capacity = ((size_t)1) << hash_size;
     
     loh_byte_buffer ret = {0, 0, 0};
     
@@ -399,8 +399,8 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
     
     hashmap.hash_size = hash_size;
     hashmap.hash_shl = hash_shl;
-    hashmap.hash_max = (1 << hash_shl);
-    hashmap.hash_mask = (1 << hash_shl) - 1;
+    hashmap.hash_i_max = (1 << hash_shl);
+    hashmap.hash_i_mask = (1 << hash_shl) - 1;
     
     memset(hashmap.hashtable, 0, sizeof(uint64_t) * hash_capacity);
     memset(hashmap.hashtable_i, 0, sizeof(uint8_t) * hash_i_capacity);
