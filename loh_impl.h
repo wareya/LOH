@@ -539,15 +539,8 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
 typedef struct _huff_node {
     struct _huff_node * children[2];
     int64_t freq;
-    // A huffman code for a symbol from a string of length N will never exceed log2(N) in length.
-    // (e.g. for a 65kbyte file, it's impossible for there to both be enough unique symbols AND
-    //  an unbalanced-enough symbol distribution that the huffman tree is more than 16 levels deep)
-    // For a token to require 16 bits to code, it needs to occur have a freq around 1/65k,
-    //  which can only happen if the surrounding data is at least 65k long! and log2(65k) == 16.
-    // (I haven't proven this to myself, but if it's wrong, it's only wrong by 1 bit.)
-    // So, storing codes from a 64-bit-address-space file in a 64-bit number is fine.
-    // (Or, if I'm wrong, from a 63-bit-address-space file.)
-    uint64_t code;
+    // We length-limit our codes to 15 bits, so storing them in a u16 is fine.
+    uint16_t code;
     uint8_t code_len;
     uint8_t symbol;
 } huff_node_t;
