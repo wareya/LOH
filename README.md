@@ -28,10 +28,10 @@ data/cc0_photo.tga | 3728 KB | - | -
 data/cc0_photo.tga.loh | 2682 KB | 0.126s | 0.048s
 data/cc0_photo.tga.-9.loh | 2651 KB | 0.813s | 0.047s
 data/cc0_photo.tga.l0d3.loh | 2223 KB | **0.04s** | 0.049s
-data/cc0_photo.tga.-5.gz | 2473 KB | 0.171s | **0.03s**
+data/cc0_photo.tga.-5.gz | 2473 KB | 0.171s | 0.03s
 data/cc0_photo.tga.-9.gz | 2466 KB | 0.262s | 0.033s
 data/cc0_photo.tga.-5.lz4 | 2777 KB | 0.116s | 0.013s
-data/cc0_photo.tga.-9.lz4 | 2753 KB | 0.178s | 0.012s
+data/cc0_photo.tga.-9.lz4 | 2753 KB | 0.178s | **0.012s**
 data/cc0_photo.tga.-19.zst | 2328 KB | 1.031s | 0.013s
 data/cc0_photo.tga.-11.br | **2069 KB** | 12.242s | 0.039s
 -|-|-|-
