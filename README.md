@@ -113,25 +113,49 @@ All three steps are optional, and whether they're done is stored in the header. 
 
 ### Lookback
 
-The LZSS-style layer works strictly with bytes, not with a bitstream. Each byte instruction sequence defines a distance term and a length term.
-
-When the distance term is zero, the length term is interpreted as a number of literal bytes to decode (plus one), which follow the byte instruction sequence. If the distance term is not zero, then the length and distance are interpreted as a lookback command (with size plus four).
-
-The byte instruction sequences are made up of an initial byte and many extension bytes. Extension bytes add extra more-significant bits to the values decoded from the initial byte. Initial and extension byte instructions are differentiated by their lower bit, which is 0 for initial bytes.
+The LZSS-style layer works strictly with bytes, not with a bitstream. When the decoder's control loop reads a byte, it looks at the least-significant bit (i.e. it calculates `byte & 1`). If the bit is set, then the current byte is the start of a lookback command. If it's unset, then the current byte is the start of a literal sequence, i.e. uncompressed data. Literal control byte sequences store just the number of bytes that follow. Lookback sequences encode first the lookback distance and then the length (number of bytes to copy). A description of every possible control byte sequence follows:
 
 ```
-Initial byte:
-dddd sss0
+Literals:
 
-Extension byte:
-dddd dds1
+xxxx xx00 ...
+literals, ... contains <xxxx xx> literals
+
+xxxx xx10 u8 ...
+long literals, ... contains <u8 xxxx xx> literals
+
+Lookback command distance parts:
+
+xxxx xx01
+Lookback has a distance <xxxx xx>.
+
+xxxx x011 +u8
+13-bit lookback
+Lookback has a distance <u8 xxxx x>.
+
+xxxx 0111 +u16
+20-bit lookback
+Lookback has a distance <u16 xxxx>. The u16 is least-significant-chunk-first.
+
+xxx0 1111 +u24
+27-bit lookback
+Etc.
+
+xx01 1111 +u32
+34-bit lookback
+
+The distance part is followed by a lookback length sequence.
+
+Lookback lengths:
+
+xxxx xxx0
+Lookback has a length of <xxxx xxx>.
+
+xxxx xxx1 u8
+Lookback has a length of <u8 xxxx xxx>.
 ```
 
-If a byte instruction sequence has three bytes, then the decoded bits for each value will be in this order, from most to least significant, with the number value indicating the address of the byte the bit came from:
-```
-size:     21000
-distance: 2222221111110000
-```
+Numbers stored in multiple bytes are stored with the less-significant parts of that number in earlier bytes. For example, if you decode 4 bits from byte 0, 7 bits from byte 1, and 2 bytes from byte 2, and combine them into a single value, the layout of bits from most significant to least significant should have the following byte origins: `2 2111 1111 0000`
 
 ### Huffman coding
 
