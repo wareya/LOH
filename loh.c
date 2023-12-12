@@ -55,7 +55,7 @@ int main(int argc, char ** argv)
     if (argv[1][0] == 'z')
     {
         uint8_t do_diff = 0;
-        uint8_t do_lookback = 4;
+        int8_t do_lookback = 4;
         uint8_t do_huff = 1;
         
         if (argc > 4)
