@@ -224,7 +224,7 @@ typedef struct {
 static inline uint32_t hashmap_hash(loh_hashmap * hashmap, const uint8_t * bytes)
 {
     // hashing function (can be anything; go ahead and optimize it as long as it doesn't result in tons of collisions)
-    uint32_t temp = 0xA68BF1D7;
+    uint32_t temp = 0xA68BF0C7;
     // unaligned-safe 32-bit load
     uint32_t a = bytes[0];
     a |= ((uint32_t)bytes[0]) << 0;

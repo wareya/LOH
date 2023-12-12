@@ -113,49 +113,24 @@ All three steps are optional, and whether they're done is stored in the header. 
 
 ### Lookback
 
-The LZSS-style layer works strictly with bytes, not with a bitstream. When the decoder's control loop reads a byte, it looks at the least-significant bit (i.e. it calculates `byte & 1`). If the bit is set, then the current byte is the start of a lookback command. If it's unset, then the current byte is the start of a literal sequence, i.e. uncompressed data. Literal control byte sequences store just the number of bytes that follow. Lookback sequences encode first the lookback distance and then the length (number of bytes to copy). A description of every possible control byte sequence follows:
+The LZSS-style layer works strictly with bytes, not with a bitstream.
+
+Each byte instruction sequence defines a distance term and a length term. If the distance term is zero, the length term is interpreted as a number of literal bytes to decode (plus one), which follow the byte instruction sequence. If the distance term is not zero, then the length and distance are interpreted as a lookback command (with size plus four).
+
+The byte instruction sequences are made up of an initial byte with four bits for each value and a lower bit, three of which are part of the value itself and one of which indicates whether any extension bytes for that value follow. Any extension bytes for the size term follow first, followed by any extension bytes for the distance term. Extension bytes contain seven bits of value information in the top bits, with the zeroth bit (lowest, the '1' bit) indicating whether or not the extension byte continues. Bits from later extension bytes are added shifted left relative to the bits from previous bytes.
 
 ```
-Literals:
+Initial byte:
+dddX sssX
 
-xxxx xx00 ...
-literals, ... contains <xxxx xx> literals
+Extension byte (if not final):
+vvvv vvv1
 
-xxxx xx10 u8 ...
-long literals, ... contains <u8 xxxx xx> literals
-
-Lookback command distance parts:
-
-xxxx xx01
-Lookback has a distance <xxxx xx>.
-
-xxxx x011 +u8
-13-bit lookback
-Lookback has a distance <u8 xxxx x>.
-
-xxxx 0111 +u16
-20-bit lookback
-Lookback has a distance <u16 xxxx>. The u16 is least-significant-chunk-first.
-
-xxx0 1111 +u24
-27-bit lookback
-Etc.
-
-xx01 1111 +u32
-34-bit lookback
-
-The distance part is followed by a lookback length sequence.
-
-Lookback lengths:
-
-xxxx xxx0
-Lookback has a length of <xxxx xxx>.
-
-xxxx xxx1 u8
-Lookback has a length of <u8 xxxx xxx>.
+Extension byte (if final):
+vvvv vvv0
 ```
 
-Numbers stored in multiple bytes are stored with the less-significant parts of that number in earlier bytes. For example, if you decode 4 bits from byte 0, 7 bits from byte 1, and 2 bytes from byte 2, and combine them into a single value, the layout of bits from most significant to least significant should have the following byte origins: `2 2111 1111 0000`
+So, 0x00 is a single-byte instruction sequence declaring that it is followed by a single literal byte. 0x02 indicates two literal bytes. 0x04 indicates three literal bytes. 0x01 0x70 indicates 448 literal bytes. 0x01 0xF0 indicates 960 literal bytes. 0x10 0x10 (0001 0000  0001 0000) indicates a lookback command with length four (stored as 0) and a distance of 64.
 
 ### Huffman coding
 
