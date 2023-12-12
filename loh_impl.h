@@ -641,20 +641,22 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
     qsort(&counts, 256, sizeof(uint64_t), count_compare);
     
     // we want to generate a code with a maximum of 15 bits...
-    // ... which means that the minimum frequency must be at least 1/32768 of the total count
+    // ... which means that the minimum frequency must be at least 1/(1<<14) of the total count
+    // (we give ourselves 1 bit of leniency because the algorithm isn't perfect)
     if (symbol_count > 0)
     {
-        // use ceiled division to make super extra sure that we don't go over 1/32768
-        uint64_t min_ok_count = (total_count + 32767) / 32768;
+        const uint64_t n = 1 << 14;
+        // use ceiled division to make super extra sure that we don't go over 1/16k
+        uint64_t min_ok_count = (total_count + n - 1) / n;
         while ((counts[symbol_count-1] >> 8) < min_ok_count)
         {
             for (int i = symbol_count-1; i >= 0; i -= 1)
             {
                 // We use an x = max(minimum, x) approach instead of just adding to every count, because
                 //  if we never add to the most frequent item's frequency, we will definitely converge.
-                // (Specifically, this is guaranteed to converge if there are 32768 or less symbols in
+                // (Specifically, this is guaranteed to converge if there are 16k or less symbols in
                 //  the dictionary, which there are. There are only 256 at most.)
-                // More proof of convergence: We will eventually add less than 32768 to "total_count"
+                // More proof of convergence: We will eventually add less than 16k to "total_count"
                 //  two `while` iterations in a row, which will cause min_ok_count to stop changing.
                 if (counts[i] >> 8 < min_ok_count)
                 {
@@ -665,7 +667,7 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
                 else
                     break;
             }
-            min_ok_count = (total_count + 32767) / 32768;
+            min_ok_count = (total_count + n - 1) / n;
         }
     }
     
@@ -795,10 +797,10 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
         
         canon_code += 1;
     }
+    printf("%d\n", canon_len);
     
     // Our canonical length-limited huffman code is finally done!
     // To print it out (with modified frequencies):
-    /*
     for (size_t c = 0; c < symbol_count; c += 1)
     {
         printf("%02X: ", unordered_dict[c]->symbol);
@@ -807,7 +809,6 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
         printf("\t %lld", unordered_dict[c]->freq);
         puts("");
     }
-    */
     
     // Now we actually compress the input data.
     
@@ -1065,6 +1066,7 @@ static loh_byte_buffer huff_unpack(loh_bit_buffer * buf, int * error)
     
     if (!ret.data)
     {
+        puts("alloc failed");
         *error = 1;
         return ret;
     }
