@@ -797,10 +797,10 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
         
         canon_code += 1;
     }
-    printf("%d\n", canon_len);
     
     // Our canonical length-limited huffman code is finally done!
     // To print it out (with modified frequencies):
+    /*
     for (size_t c = 0; c < symbol_count; c += 1)
     {
         printf("%02X: ", unordered_dict[c]->symbol);
@@ -809,6 +809,7 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
         printf("\t %lld", unordered_dict[c]->freq);
         puts("");
     }
+    */
     
     // Now we actually compress the input data.
     
