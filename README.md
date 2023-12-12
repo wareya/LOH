@@ -130,7 +130,58 @@ Extension byte (if final):
 vvvv vvv0
 ```
 
-So, 0x00 is a single-byte instruction sequence declaring that it is followed by a single literal byte. 0x02 indicates two literal bytes. 0x04 indicates three literal bytes. 0x01 0x70 indicates 448 literal bytes. 0x01 0xF0 indicates 960 literal bytes. 0x10 0x10 (0001 0000  0001 0000) indicates a lookback command with length four (stored as 0) and a distance of 64.
+These values are stored with respect to their minimum value being one more than the maximum value that could be stored by the previous length. So, a two-byte size starts at 8 (2^3), a three-byte size starts at 1032 (2^3 + 2^(7+3)), etc. This refers to the encoded value, not the actual value; the actual size value is stored minus 1 for literals and minus 4 for lookback matches.
+
+This minimum-value-respecting encoding can be encoded like:
+
+```c
+size_t size_max = 0;
+size_t size_max_next = loh_size_mask + 1;
+size_t size_byte_count = 1;
+size_t size_bit_count = loh_size_bits; // 3
+while (write_size >= size_max_next)
+{
+    size_max = size_max_next;
+    size_bit_count += 7;
+    size_max_next += ((uint64_t)1) << size_bit_count;
+    size_byte_count += 1;
+}
+write_size -= size_max;
+
+uint8_t head_byte = 0;
+head_byte |= ((write_size & loh_size_mask) << 1) | ((size_byte_count > 1) ? 1 : 0);
+write_size >>= loh_size_bits;
+
+byte_push(&ret, head_byte);
+
+for (size_t n = 1; n < size_byte_count; n++)
+{
+    byte_push(&ret, ((write_size & 0x7F) << 1) | ((n + 1 < size_byte_count) ? 1 : 0));
+    write_size >>= 7;
+}
+```
+
+And decoded like:
+
+```c
+uint8_t size_continues = dat & 1;
+size_t size = (dat >> 1) & loh_size_mask;
+
+// ...
+
+uint64_t n = loh_size_bits; // 3
+while (size_continues)
+{
+    _LOH_CHECK_I_VS_LEN_OR_RETURN(1)
+    uint64_t cont_dat = input[i++];
+    size_continues = cont_dat & 1;
+    size += ((cont_dat >> 1) << n);
+    size += ((uint64_t)1) << n;
+    n += 7;
+}
+```
+
+This slightly complicates encoding/decoding but gives a "free" entropy savings that allows the entropy coder to be more efficient.
 
 ### Huffman coding
 
