@@ -25,21 +25,21 @@ Times are the average of five runs or however many runs it took to break 10 tota
 Name  |  Size  |  Compress time  |  Decompress time
 -|-|-|-
 data/cc0_photo.tga | 3728 KB | - | -
-data/cc0_photo.tga.loh | 2596 KB | 0.117s | 0.049s
-data/cc0_photo.tga.loh | 2575 KB | 0.677s | 0.056s
-data/cc0_photo.tga.l0d3.loh | 2051 KB | **0.05s** | 0.048s
+data/cc0_photo.tga.loh | 2595 KB | 0.15s | 0.05s
+data/cc0_photo.tga.loh | 2575 KB | 0.704s | 0.045s
+data/cc0_photo.tga.l0d3.loh | **2051 KB** | **0.057s** | 0.05s
 data/cc0_photo.tga.-5.gz | 2473 KB | 0.171s | 0.03s
 data/cc0_photo.tga.-9.gz | 2466 KB | 0.262s | 0.033s
 data/cc0_photo.tga.-5.lz4 | 2777 KB | 0.116s | 0.013s
 data/cc0_photo.tga.-9.lz4 | 2753 KB | 0.178s | **0.012s**
 data/cc0_photo.tga.-19.zst | 2328 KB | 1.031s | 0.013s
-data/cc0_photo.tga.-11.br | **2069 KB** | 12.242s | 0.039s
+data/cc0_photo.tga.-11.br | 2069 KB | 12.242s | 0.039s
 -|-|-|-
 data/blake recorded 11.wav | 27002 KB | - | -
-data/blake recorded 11.wav.loh | 25995 KB | 0.78s | 0.297s
-data/blake recorded 11.wav.loh | 25980 KB | 10.355s | 0.327s
-data/blake recorded 11.wav.d4.loh | 24326 KB | 0.515s | 0.288s
-data/blake recorded 11.wav.d4.loh | 24306 KB | 10.418s | 0.306s
+data/blake recorded 11.wav.loh | 26020 KB | 0.58s | 0.285s
+data/blake recorded 11.wav.-9.loh | 26020 KB | 5.472s | 0.323s
+data/blake recorded 11.wav.d4.loh | 24269 KB | **0.445s** | 0.268s
+data/blake recorded 11.wav.d4.-9.loh | **24270 KB** | 5.521s | 0.281s
 data/blake recorded 11.wav.-5.gz | 25920 KB | 0.859s | 0.192s
 data/blake recorded 11.wav.-9.gz | 25910 KB | 1.132s | 0.189s
 data/blake recorded 11.wav.-5.lz4 | 26404 KB | 0.719s | 0.073s
@@ -48,8 +48,8 @@ data/blake recorded 11.wav.-19.zst | 26130 KB | 8.756s | **0.034s**
 data/blake recorded 11.wav.-11.br | 25268 KB | 91.809s | 0.302s
 -|-|-|-
 data/moby dick.txt | 1246 KB | - | -
-data/moby dick.txt.loh | 604 KB | 0.049s | 0.02s
-data/moby dick.txt.-9.loh | 575 KB | 0.146s | 0.015s
+data/moby dick.txt.loh | 600 KB | 0.048s | 0.016s
+data/moby dick.txt.-9.loh | 575 KB | 0.161s | 0.019s
 data/moby dick.txt.-5.gz | 508 KB | 0.06s | 0.009s
 data/moby dick.txt.-9.gz | 499 KB | 0.13s | 0.01s
 data/moby dick.txt.-5.lz4 | 591 KB | **0.044s** | 0.005s
@@ -58,8 +58,8 @@ data/moby dick.txt.-19.zst | 412 KB | 0.689s | **0.005s**
 data/moby dick.txt.-11.br | **403 KB** | 2.38s | 0.008s
 -|-|-|-
 data/oops all zeroes.bin | 27002 KB | - | -
-data/oops all zeroes.bin.loh | 228 Bytes | 0.147s | 0.106s
-data/oops all zeroes.bin.-9.loh | 228 Bytes | 0.137s | 0.11s
+data/oops all zeroes.bin.loh | 168 Bytes | 0.145s | 0.109s
+data/oops all zeroes.bin.-9.loh | 168 Bytes | 0.124s | 0.105s
 data/oops all zeroes.bin.-5.gz | 26 KB | 0.132s | 0.13s
 data/oops all zeroes.bin.-9.gz | 26 KB | 0.13s | 0.129s
 data/oops all zeroes.bin.-5.lz4 | 106 KB | 0.03s | 0.029s
@@ -68,18 +68,18 @@ data/oops all zeroes.bin.-19.zst | 866 Bytes | 0.04s | **0.012s**
 data/oops all zeroes.bin.-11.br | **27 Bytes** | 0.567s | 0.1s
 -|-|-|-
 data/white noise.bin | **27002 KB** | - | -
-data/white noise.bin.loh | 27062 KB | 0.712s | 0.193s
-data/white noise.bin.-9.loh | 27062 KB | 10.544s | 0.195s
+data/white noise.bin.loh | 27002 KB | **0.241s** | 0.059s
+data/white noise.bin.-9.loh | 27002 KB | 2.731s | 0.09s
 data/white noise.bin.-5.gz | 27006 KB | 0.795s | 0.158s
 data/white noise.bin.-9.gz | 27006 KB | 0.794s | 0.151s
-data/white noise.bin.-5.lz4 | 27002 KB | **0.704s** | 0.068s
+data/white noise.bin.-5.lz4 | 27002 KB | 0.704s | 0.068s
 data/white noise.bin.-9.lz4 | 27002 KB | 0.722s | 0.066s
 data/white noise.bin.-19.zst | 27003 KB | 8.674s | **0.033s**
 data/white noise.bin.-11.br | 27002 KB | 46.472s | 0.061s
 -|-|-|-
 data/Godot_v4.1.3-stable_win64.exe | 117559 KB | - | -
-data/Godot_v4.1.3-stable_win64.exe.loh | 58797 KB | 2.923s | 1.142s
-data/Godot_v4.1.3-stable_win64.exe.-9.loh | 56813 KB | 19.022s | 1.342s
+data/Godot_v4.1.3-stable_win64.exe.loh | 58521 KB | 3.283s | 1.26s
+data/Godot_v4.1.3-stable_win64.exe.-9.loh | 56696 KB | 19.657s | 1.313s
 data/Godot_v4.1.3-stable_win64.exe.-5.gz | 54154 KB | 3.856s | 0.759s
 data/Godot_v4.1.3-stable_win64.exe.-9.gz | 53650 KB | 10.608s | 0.75s
 data/Godot_v4.1.3-stable_win64.exe.-5.lz4 | 60631 KB | **2.317s** | 0.391s
@@ -88,8 +88,8 @@ data/Godot_v4.1.3-stable_win64.exe.-19.zst | 45147 KB | 66.121s | **0.292s**
 data/Godot_v4.1.3-stable_win64.exe.-11.br | **42549 KB** | 382.946s | 0.889s
 -|-|-|-
 data/unifont-jp.tga | 65537 KB | - | -
-data/unifont-jp.tga.loh | 2963 KB | **0.473s** | 0.245s
-data/unifont-jp.tga.-9.loh | 2088 KB | 0.593s | 0.209s
+data/unifont-jp.tga.loh | 2963 KB | 0.542s | 0.255s
+data/unifont-jp.tga.-9.loh | 2088 KB | 0.699s | 0.211s
 data/unifont-jp.tga.-5.gz | 2223 KB | 0.548s | 0.219s
 data/unifont-jp.tga.-9.gz | 1492 KB | 16.262s | 0.192s
 data/unifont-jp.tga.-5.lz4 | 4679 KB | 0.651s | 0.137s
