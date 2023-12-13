@@ -14,88 +14,84 @@ This project compiles cleanly both as C and C++ code without warnings or errors.
 
 Not fuzzed. However, the compressor is probably perfectly safe, and the decompressor is probably safe on trusted/correct data.
 
-\* Around 1000 lines of actual code according to `cloc`. The file itself is over 1k lines because it's well-commented.
+\* Around 1000 lines of actual code according to `cloc`. The file itself is around 1500 lines because it's well-commented. Also, I use allman braces, so my line count is inflated relative to old ansi-style C projects.
 
 ## Comparison
 
 Made with the gzip, lz4, brotli, and zstd commands, and loh.c compiled as -O3 (without -march=native). Ran on a Steam Deck in desktop mode. Dashes refer to compression level. LOH has technique flags, so the technique flags that differ from the defaults are noted instead (- means lookback, h means Huffman, d means delta). The best flags are used for the given file. If the default flags are the best, alternative flags are not attempted. For LOH, both the default (4) and maximum (9) quality level are attempted.
 
 Times are the average of five runs or however many runs it took to break 10 total seconds, whichever was fewer.
-
-Name  |  Size  |  Compress time  |  Decompress time
+Name | Size | Compress time | Decompress time
 -|-|-|-
 data/cc0_photo.tga | 3728 KB | - | -
-data/cc0_photo.tga.loh | 2595 KB | 0.15s | 0.05s
-data/cc0_photo.tga.loh | 2575 KB | 0.704s | 0.045s
-data/cc0_photo.tga.-0.d3.loh | **2051 KB** | **0.057s** | 0.05s
-data/cc0_photo.tga.-5.gz | 2473 KB | 0.171s | 0.03s
-data/cc0_photo.tga.-9.gz | 2466 KB | 0.262s | 0.033s
-data/cc0_photo.tga.-5.lz4 | 2777 KB | 0.116s | 0.013s
-data/cc0_photo.tga.-9.lz4 | 2753 KB | 0.178s | **0.012s**
-data/cc0_photo.tga.-19.zst | 2328 KB | 1.031s | 0.013s
-data/cc0_photo.tga.-11.br | 2069 KB | 12.242s | 0.039s
+data/cc0_photo.tga.loh | **2051 KB** | **0.096s** | 0.047s
+data/cc0_photo.tga.-9.loh | **2051 KB** | 0.247s | 0.045s
+data/cc0_photo.tga.-5.gz | 2473 KB | 0.167s | 0.029s
+data/cc0_photo.tga.-9.gz | 2466 KB | 0.254s | 0.041s
+data/cc0_photo.tga.-5.lz4 | 2777 KB | 0.129s | **0.011s**
+data/cc0_photo.tga.-9.lz4 | 2753 KB | 0.187s | 0.014s
+data/cc0_photo.tga.-19.zst | 2328 KB | 0.919s | 0.018s
+data/cc0_photo.tga.-11.br | 2069 KB | 11.63s | 0.044s
 -|-|-|-
 data/blake recorded 11.wav | 27002 KB | - | -
-data/blake recorded 11.wav.loh | 26020 KB | 0.58s | 0.285s
-data/blake recorded 11.wav.-9.loh | 26020 KB | 5.472s | 0.323s
-data/blake recorded 11.wav.d4.loh | 24269 KB | **0.445s** | 0.268s
-data/blake recorded 11.wav.d4.-9.loh | **24270 KB** | 5.521s | 0.281s
-data/blake recorded 11.wav.-5.gz | 25920 KB | 0.859s | 0.192s
-data/blake recorded 11.wav.-9.gz | 25910 KB | 1.132s | 0.189s
-data/blake recorded 11.wav.-5.lz4 | 26404 KB | 0.719s | 0.073s
-data/blake recorded 11.wav.-9.lz4 | 26375 KB | 0.809s | 0.065s
-data/blake recorded 11.wav.-19.zst | 26130 KB | 8.756s | **0.034s**
-data/blake recorded 11.wav.-11.br | 25268 KB | 91.809s | 0.302s
+data/blake recorded 11.wav.loh | **24270 KB** | **0.63s** | 0.276s
+data/blake recorded 11.wav.-9.loh | **24270 KB** | 5.002s | 0.339s
+data/blake recorded 11.wav.-5.gz | 25920 KB | 0.85s | 0.194s
+data/blake recorded 11.wav.-9.gz | 25910 KB | 1.112s | 0.19s
+data/blake recorded 11.wav.-5.lz4 | 26404 KB | 0.718s | 0.079s
+data/blake recorded 11.wav.-9.lz4 | 26375 KB | 0.807s | 0.075s
+data/blake recorded 11.wav.-19.zst | 26130 KB | 8.425s | **0.034s**
+data/blake recorded 11.wav.-11.br | 25268 KB | 88.658s | 0.308s
 -|-|-|-
 data/moby dick.txt | 1246 KB | - | -
-data/moby dick.txt.loh | 600 KB | 0.048s | 0.016s
-data/moby dick.txt.-9.loh | 575 KB | 0.161s | 0.019s
-data/moby dick.txt.-5.gz | 508 KB | 0.06s | 0.009s
-data/moby dick.txt.-9.gz | 499 KB | 0.13s | 0.01s
-data/moby dick.txt.-5.lz4 | 591 KB | **0.044s** | 0.005s
-data/moby dick.txt.-9.lz4 | 583 KB | 0.079s | 0.006s
-data/moby dick.txt.-19.zst | 412 KB | 0.689s | **0.005s**
-data/moby dick.txt.-11.br | **403 KB** | 2.38s | 0.008s
+data/moby dick.txt.loh | 600 KB | **0.043s** | 0.02s
+data/moby dick.txt.-9.loh | 575 KB | 0.147s | 0.02s
+data/moby dick.txt.-5.gz | 508 KB | 0.065s | 0.01s
+data/moby dick.txt.-9.gz | 499 KB | 0.127s | 0.013s
+data/moby dick.txt.-5.lz4 | 591 KB | 0.045s | 0.007s
+data/moby dick.txt.-9.lz4 | 583 KB | 0.082s | 0.005s
+data/moby dick.txt.-19.zst | 412 KB | 0.544s | **0.005s**
+data/moby dick.txt.-11.br | **403 KB** | 2.21s | 0.009s
 -|-|-|-
 data/oops all zeroes.bin | 27002 KB | - | -
-data/oops all zeroes.bin.loh | 168 Bytes | 0.145s | 0.109s
-data/oops all zeroes.bin.-9.loh | 168 Bytes | 0.124s | 0.105s
-data/oops all zeroes.bin.-5.gz | 26 KB | 0.132s | 0.13s
-data/oops all zeroes.bin.-9.gz | 26 KB | 0.13s | 0.129s
-data/oops all zeroes.bin.-5.lz4 | 106 KB | 0.03s | 0.029s
-data/oops all zeroes.bin.-9.lz4 | 106 KB | **0.024s** | 0.025s
-data/oops all zeroes.bin.-19.zst | 866 Bytes | 0.04s | **0.012s**
-data/oops all zeroes.bin.-11.br | **27 Bytes** | 0.567s | 0.1s
+data/oops all zeroes.bin.loh | 168 Bytes | 0.134s | 0.116s
+data/oops all zeroes.bin.-9.loh | 168 Bytes | 0.112s | 0.105s
+data/oops all zeroes.bin.-5.gz | 26 KB | 0.126s | 0.132s
+data/oops all zeroes.bin.-9.gz | 26 KB | 0.139s | 0.131s
+data/oops all zeroes.bin.-5.lz4 | 106 KB | **0.024s** | 0.026s
+data/oops all zeroes.bin.-9.lz4 | 106 KB | 0.025s | 0.027s
+data/oops all zeroes.bin.-19.zst | 866 Bytes | 0.045s | **0.01s**
+data/oops all zeroes.bin.-11.br | **27 Bytes** | 0.549s | 0.103s
 -|-|-|-
 data/white noise.bin | **27002 KB** | - | -
-data/white noise.bin.loh | 27002 KB | **0.241s** | 0.059s
-data/white noise.bin.-9.loh | 27002 KB | 2.731s | 0.09s
-data/white noise.bin.-5.gz | 27006 KB | 0.795s | 0.158s
-data/white noise.bin.-9.gz | 27006 KB | 0.794s | 0.151s
-data/white noise.bin.-5.lz4 | 27002 KB | 0.704s | 0.068s
-data/white noise.bin.-9.lz4 | 27002 KB | 0.722s | 0.066s
-data/white noise.bin.-19.zst | 27003 KB | 8.674s | **0.033s**
-data/white noise.bin.-11.br | 27002 KB | 46.472s | 0.061s
+data/white noise.bin.loh | 27002 KB | **0.441s** | 0.053s
+data/white noise.bin.-9.loh | 27002 KB | 2.63s | 0.055s
+data/white noise.bin.-5.gz | 27006 KB | 0.781s | 0.157s
+data/white noise.bin.-9.gz | 27006 KB | 0.773s | 0.153s
+data/white noise.bin.-5.lz4 | 27002 KB | 0.711s | 0.07s
+data/white noise.bin.-9.lz4 | 27002 KB | 0.731s | 0.067s
+data/white noise.bin.-19.zst | 27003 KB | 8.38s | **0.038s**
+data/white noise.bin.-11.br | 27002 KB | 44.384s | 0.064s
 -|-|-|-
 data/Godot_v4.1.3-stable_win64.exe | 117559 KB | - | -
-data/Godot_v4.1.3-stable_win64.exe.loh | 58521 KB | 3.283s | 1.26s
-data/Godot_v4.1.3-stable_win64.exe.-9.loh | 56696 KB | 19.657s | 1.313s
-data/Godot_v4.1.3-stable_win64.exe.-5.gz | 54154 KB | 3.856s | 0.759s
-data/Godot_v4.1.3-stable_win64.exe.-9.gz | 53650 KB | 10.608s | 0.75s
-data/Godot_v4.1.3-stable_win64.exe.-5.lz4 | 60631 KB | **2.317s** | 0.391s
-data/Godot_v4.1.3-stable_win64.exe.-9.lz4 | 60210 KB | 3.903s | 0.4s
-data/Godot_v4.1.3-stable_win64.exe.-19.zst | 45147 KB | 66.121s | **0.292s**
-data/Godot_v4.1.3-stable_win64.exe.-11.br | **42549 KB** | 382.946s | 0.889s
+data/Godot_v4.1.3-stable_win64.exe.loh | 58521 KB | **2.864s** | 1.33s
+data/Godot_v4.1.3-stable_win64.exe.-9.loh | 56696 KB | 17.759s | 1.293s
+data/Godot_v4.1.3-stable_win64.exe.-5.gz | 54154 KB | 3.775s | 0.764s
+data/Godot_v4.1.3-stable_win64.exe.-9.gz | 53650 KB | 10.613s | 0.739s
+data/Godot_v4.1.3-stable_win64.exe.-5.lz4 | 60631 KB | 2.389s | 0.387s
+data/Godot_v4.1.3-stable_win64.exe.-9.lz4 | 60210 KB | 3.911s | 0.385s
+data/Godot_v4.1.3-stable_win64.exe.-19.zst | 45147 KB | 61.172s | **0.276s**
+data/Godot_v4.1.3-stable_win64.exe.-11.br | **42549 KB** | 368.713s | 0.907s
 -|-|-|-
 data/unifont-jp.tga | 65537 KB | - | -
-data/unifont-jp.tga.loh | 2963 KB | 0.542s | 0.255s
-data/unifont-jp.tga.-9.loh | 2088 KB | 0.699s | 0.211s
-data/unifont-jp.tga.-5.gz | 2223 KB | 0.548s | 0.219s
-data/unifont-jp.tga.-9.gz | 1492 KB | 16.262s | 0.192s
-data/unifont-jp.tga.-5.lz4 | 4679 KB | 0.651s | 0.137s
-data/unifont-jp.tga.-9.lz4 | 2715 KB | 4.813s | 0.132s
-data/unifont-jp.tga.-19.zst | 1258 KB | 21.78s | **0.076s**
-data/unifont-jp.tga.-11.br | **1055 KB** | 156.354s | 0.133s
+data/unifont-jp.tga.loh | 2963 KB | **0.467s** | 0.245s
+data/unifont-jp.tga.-9.loh | 2088 KB | 0.599s | 0.211s
+data/unifont-jp.tga.-5.gz | 2223 KB | 0.554s | 0.229s
+data/unifont-jp.tga.-9.gz | 1492 KB | 16.069s | 0.203s
+data/unifont-jp.tga.-5.lz4 | 4679 KB | 0.655s | 0.139s
+data/unifont-jp.tga.-9.lz4 | 2715 KB | 4.776s | 0.133s
+data/unifont-jp.tga.-19.zst | 1258 KB | 20.619s | **0.072s**
+data/unifont-jp.tga.-11.br | **1055 KB** | 153.028s | 0.156s
 
 (LZ4 has a maximum compression ratio of 1:256-ish, because of how it stores long integers.)
 

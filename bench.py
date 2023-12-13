@@ -2,17 +2,22 @@
 
 commands = [
     ["./loh z FILE ARCH", "./loh x ARCH data/asdf", ".loh"],
+    ["./loh z FILE ARCH 9", "./loh x ARCH data/asdf", ".-9.loh"],
     ["gzip -kf FILE -5 -S .-5.gz", "gzip -dkc ARCH", ".-5.gz"],
     ["gzip -kf FILE -9 -S .-9.gz", "gzip -dkc ARCH", ".-9.gz"],
     ["lz4 -f FILE ARCH -5", "lz4 -f ARCH data/asdf", ".-5.lz4"],
     ["lz4 -f FILE ARCH -9", "lz4 -f ARCH data/asdf", ".-9.lz4"],
     ["zstd -kf FILE -19 -o ARCH", "zstd -dkf ARCH -o data/asdf", ".-19.zst"],
-    ["brotli -kf FILE -o ARCH", "brotli -dkf ARCH -o data/asdf", ".-11.br"],
+    ["brotli -kf FILE -q 11 -o ARCH", "brotli -dkf ARCH -o data/asdf", ".-11.br"],
 ]
 
 extra_commands = {
-    "blake" : [["./loh z FILE ARCH 1 1 4", "./loh x ARCH data/asdf", ".d4.loh"]],
-    "photo" : [["./loh z FILE ARCH 0 1 3", "./loh x ARCH data/asdf", ".l0d3.loh"]],
+#    "blake" : [
+#        ["./loh z FILE ARCH 1 1 4", "./loh x ARCH data/asdf", ".d4.loh"],
+#        ["./loh z FILE ARCH 9 1 4", "./loh x ARCH data/asdf", ".d4.loh"]
+#    ],
+#
+#    "photo" : [["./loh z FILE ARCH 0 1 3", "./loh x ARCH data/asdf", ".l0d3.loh"]],
 }
 
 files = [
