@@ -840,6 +840,7 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
             
             canon_code += 1;
         }
+        uint8_t incompressible = canon_len == 8 && symbol_count == 256;
         
         /*
         // Our canonical length-limited huffman code is finally done!
@@ -863,65 +864,79 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
         
         //size_t start_byte = ret.buffer.len;
         
-        // push huffman code description
-        // start at code length 1
-        // bit 1: add 1 to code length
-        // bit 0: read next 8 bits as symbol for next code. add 1 to code
-        uint8_t prev_symbol = 0;
-        if (len > 0)
+        bit_push(&ret, incompressible);
+        
+        if (!incompressible)
         {
-            bits_push(&ret, symbol_count - 1, 8);
-            size_t code_depth = 1;
-            for (size_t i = 0; i < symbol_count; i++)
+            // push huffman code description
+            // start at code length 1
+            // bit 1: add 1 to code length
+            // bit 0: read next 8 bits as symbol for next code. add 1 to code
+            uint8_t prev_symbol = 0;
+            if (len > 0)
             {
-                while (code_depth < unordered_dict[i]->code_len)
+                bits_push(&ret, symbol_count - 1, 8);
+                size_t code_depth = 1;
+                for (size_t i = 0; i < symbol_count; i++)
                 {
-                    bit_push(&ret, 1);
-                    code_depth += 1;
-                }
-                bit_push(&ret, 0);
-                uint8_t diff = unordered_dict[i]->symbol - prev_symbol;
-                
-                // stored as diffs
-                // 0 : 1
-                // 10 : 2
-                // 110 : 3
-                // 1110 : 4
-                // 1111xxxxxxxx : other
-                if (diff >= 1 && diff <= 4)
-                {
-                    bits_push(&ret, 0xFF, diff - 1);
+                    while (code_depth < unordered_dict[i]->code_len)
+                    {
+                        bit_push(&ret, 1);
+                        code_depth += 1;
+                    }
                     bit_push(&ret, 0);
+                    uint8_t diff = unordered_dict[i]->symbol - prev_symbol;
+                    
+                    // stored as diffs
+                    // 0 : 1
+                    // 10 : 2
+                    // 110 : 3
+                    // 1110 : 4
+                    // 1111xxxxxxxx : other
+                    if (diff >= 1 && diff <= 4)
+                    {
+                        bits_push(&ret, 0xFF, diff - 1);
+                        bit_push(&ret, 0);
+                    }
+                    else
+                    {
+                        bits_push(&ret, 0xFF, 4);
+                        bits_push(&ret, diff, 8);
+                    }
+                    prev_symbol = unordered_dict[i]->symbol;
                 }
-                else
-                {
-                    bits_push(&ret, 0xFF, 4);
-                    bits_push(&ret, diff, 8);
-                }
-                prev_symbol = unordered_dict[i]->symbol;
             }
+            
+            //size_t end_byte = ret.buffer.len;
+            
+            //header_overhead_bytes += end_byte - start_byte + 1;
+            
+            // the bit buffer is forcibly aligned to the start of the next byte at the end of the huff tree
+            if (ret.bit_index != 0)
+                ret.bit_index = 8;
+            
+            // push huffman-coded string
+            for (size_t i = 0; i < len; i++)
+                bits_push(&ret, dict[data[i]]->code, dict[data[i]]->code_len);
+            
+            // despite all we've done to them, our huffman tree nodes still have their child pointers intact
+            // so we can recursively free all our nodes all at once
+            if (queue_needs_free)
+                free_huff_nodes(queue[0]);
+            // if we only have 0 or 1 nodes, then the queue doesn't run, so we need to free them directly
+            // (only if there are actually any nodes, though)
+            else if (symbol_count == 1)
+                free_huff_nodes(unordered_dict[0]);
         }
-        
-        //size_t end_byte = ret.buffer.len;
-        
-        //header_overhead_bytes += end_byte - start_byte + 1;
-        
-        // the bit buffer is forcibly aligned to the start of the next byte at the end of the huff tree
-        if (ret.bit_index != 0)
-            ret.bit_index = 8;
-        
-        // push huffman-coded string
-        for (size_t i = 0; i < len; i++)
-            bits_push(&ret, dict[data[i]]->code, dict[data[i]]->code_len);
-        
-        // despite all we've done to them, our huffman tree nodes still have their child pointers intact
-        // so we can recursively free all our nodes all at once
-        if (queue_needs_free)
-            free_huff_nodes(queue[0]);
-        // if we only have 0 or 1 nodes, then the queue doesn't run, so we need to free them directly
-        // (only if there are actually any nodes, though)
-        else if (symbol_count == 1)
-            free_huff_nodes(unordered_dict[0]);
+        else
+        {
+            // the bit buffer is forcibly aligned to the start of the next byte before incompressible data
+            if (ret.bit_index != 0)
+                ret.bit_index = 8;
+            
+            for (size_t i = 0; i < len; i++)
+                bits_push(&ret, data[i], 8);
+        }
     }
     
     /*
@@ -1003,16 +1018,32 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
         if (do_lookback)
         {
             loh_byte_buffer new_buf = lookback_compress(buf.data, buf.len, do_lookback);
-            if (buf.data != raw_data)
-                LOH_FREE(buf.data);
-            buf = new_buf;
+            if (new_buf.len < buf.len)
+            {
+                if (buf.data != raw_data)
+                    LOH_FREE(buf.data);
+                buf = new_buf;
+            }
+            else
+            {
+                LOH_FREE(new_buf.data);
+                do_lookback = 0;
+            }
         }
         if (do_huff)
         {
             loh_byte_buffer new_buf = huff_pack(buf.data, buf.len).buffer;
-            if (buf.data != raw_data)
-                LOH_FREE(buf.data);
-            buf = new_buf;
+            if (new_buf.len < buf.len)
+            {
+                if (buf.data != raw_data)
+                    LOH_FREE(buf.data);
+                buf = new_buf;
+            }
+            else
+            {
+                LOH_FREE(new_buf.data);
+                do_huff = 0;
+            }
         }
         
         byte_push(&real_buf, do_diff);
@@ -1174,90 +1205,109 @@ static loh_byte_buffer huff_unpack(loh_bit_buffer * buf, int * error)
         
         uint32_t chunk_len = bits_pop(buf, 8*4);
         
-        // load huffman code description
-        // starts at code length 1
-        // bit 1: add 1 to code length
-        // bit 0: read next 8 bits as symbol for next code. add 1 to code
-        uint16_t symbol_count = bits_pop(buf, 8) + 1;
-        uint16_t max_codes[16] = {0};
-        uint8_t symbols[32768] = {0};
-        uint16_t code_value = 0;
-        size_t code_depth = 1;
-        uint8_t prev_symbol = 0;
-        for (size_t i = 0; i < symbol_count; i++)
+        uint8_t incompressible = bit_pop(buf);
+        
+        if (!incompressible)
         {
-            uint8_t bit = bit_pop(buf);
-            while (bit)
+            // load huffman code description
+            // starts at code length 1
+            // bit 1: add 1 to code length
+            // bit 0: read next 8 bits as symbol for next code. add 1 to code
+            uint16_t symbol_count = bits_pop(buf, 8) + 1;
+            uint16_t max_codes[16] = {0};
+            uint8_t symbols[32768] = {0};
+            uint16_t code_value = 0;
+            size_t code_depth = 1;
+            uint8_t prev_symbol = 0;
+            for (size_t i = 0; i < symbol_count; i++)
             {
-                code_value <<= 1;
-                code_depth += 1;
-                bit = bit_pop(buf);
-                if (code_depth > 15)
+                uint8_t bit = bit_pop(buf);
+                while (bit)
                 {
-                    *error = 1;
-                    return ret;
+                    code_value <<= 1;
+                    code_depth += 1;
+                    bit = bit_pop(buf);
+                    if (code_depth > 15)
+                    {
+                        *error = 1;
+                        return ret;
+                    }
                 }
+                
+                // stored as diffs
+                // 0 : 1
+                // 10 : 2
+                // 110 : 3
+                // 1110 : 4
+                // 1111xxxxxxxx : other
+                uint8_t diff = 1 + bit_pop(buf);
+                diff += diff == 2 && bit_pop(buf);
+                diff += diff == 3 && bit_pop(buf);
+                diff += diff == 4 && bit_pop(buf);
+                if (diff == 5)
+                    diff = bits_pop(buf, 8);
+                
+                uint8_t symbol = prev_symbol + diff;
+                prev_symbol += diff;
+                
+                symbols[code_value] = symbol;
+                max_codes[code_depth] = code_value + 1;
+                code_value += 1;
+            }
+            max_codes[code_depth] = 0xFFFF;
+            
+            // the bit buffer is forcibly aligned to the start of the next byte at the end of the huffman tree data
+            if (buf->bit_index != 0)
+            {
+                buf->bit_index = 0;
+                buf->byte_index += 1;
             }
             
-            // stored as diffs
-            // 0 : 1
-            // 10 : 2
-            // 110 : 3
-            // 1110 : 4
-            // 1111xxxxxxxx : other
-            uint8_t diff = 1 + bit_pop(buf);
-            diff += diff == 2 && bit_pop(buf);
-            diff += diff == 3 && bit_pop(buf);
-            diff += diff == 4 && bit_pop(buf);
-            if (diff == 5)
-                diff = bits_pop(buf, 8);
-            
-            uint8_t symbol = prev_symbol + diff;
-            prev_symbol += diff;
-            
-            symbols[code_value] = symbol;
-            max_codes[code_depth] = code_value + 1;
-            code_value += 1;
-        }
-        max_codes[code_depth] = 0xFFFF;
-        
-        // the bit buffer is forcibly aligned to the start of the next byte at the end of the huffman tree data
-        if (buf->bit_index != 0)
-        {
+            size_t n = 0;
+            size_t i = start_len;
+            uint16_t code_word = 0;
+            uint16_t * max_code = max_codes + 1;
+            // consume all remaining input bytes
+            size_t j = 0;
+            for (j = buf->byte_index; j < buf->buffer.len; j++)
+            {
+                // operating on bit buffer input bytes/words is faster than operating on individual input bits
+                uint8_t word = buf->buffer.data[j];
+                for (uint8_t b = 0; b < 8; b += 1)
+                {
+                    code_word = code_word | (word & 1);
+                    word >>= 1;
+                    if (code_word < *max_code++)
+                    {
+                        ret.data[i++] = symbols[code_word];
+                        n += 1;
+                        code_word = 0;
+                        max_code = max_codes + 1;
+                    }
+                    else
+                        code_word <<= 1;
+                }
+                if (n >= chunk_len)
+                    break;
+            }
+            buf->byte_index = j + 1;
             buf->bit_index = 0;
-            buf->byte_index += 1;
         }
-        
-        size_t n = 0;
-        size_t i = start_len;
-        uint16_t code_word = 0;
-        uint16_t * max_code = max_codes + 1;
-        // consume all remaining input bytes
-        size_t j = 0;
-        for (j = buf->byte_index; j < buf->buffer.len; j++)
+        else
         {
-            // operating on bit buffer input bytes/words is faster than operating on individual input bits
-            uint8_t word = buf->buffer.data[j];
-            for (uint8_t b = 0; b < 8; b += 1)
+            // the bit buffer is forcibly aligned to the start of the next byte for incompressible data
+            if (buf->bit_index != 0)
             {
-                code_word = code_word | (word & 1);
-                word >>= 1;
-                if (code_word < *max_code++)
-                {
-                    ret.data[i++] = symbols[code_word];
-                    n += 1;
-                    code_word = 0;
-                    max_code = max_codes + 1;
-                }
-                else
-                    code_word <<= 1;
+                buf->bit_index = 0;
+                buf->byte_index += 1;
             }
-            if (n >= chunk_len)
-                break;
+            
+            for (size_t i = start_len; i < start_len + chunk_len; i += 1)
+                ret.data[i] = buf->buffer.data[buf->byte_index + (i - start_len)];
+            
+            buf->byte_index += chunk_len;
+            buf->bit_index = 0;
         }
-        buf->byte_index = j + 1;
-        buf->bit_index = 0;
-        
         start_len += chunk_len;
     }
      
