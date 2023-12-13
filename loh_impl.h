@@ -1010,16 +1010,69 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
         
         loh_byte_buffer buf = {raw_data, in_size, in_size};
         
+        // detect probably-good differentiation stride
+        // step 1: figure out the typical absolute difference between bytes
+        // (128 isn't guaranteed)
+        
+        int64_t difference = 0;
+        uint64_t rand = 19529;
+        const uint64_t m = 0xA68BF0C7;
+        for (size_t n = 0; n < 4096; n += 1)
+        {
+            rand *= m + n * 2;
+            size_t a = rand % in_size;
+            rand *= m + n * 2;
+            size_t b = rand % in_size;
+            int16_t diff = (int16_t)data[in_start + a] - (int16_t)data[in_start + b];
+            diff = diff < 0 ? -diff : diff;
+            difference += diff;
+        }
+        difference /= 4096;
+        
+        int64_t orig_difference = difference;
+        
+        // now check 1 through 16 as possible differentiation values, using a similar strategy
+        if (!do_diff)
+        {
+            for (uint8_t diff_opt = 1; diff_opt <= 16; diff_opt += 1)
+            {
+                int64_t diff_difference = 0;
+                if (diff_opt * 2 > in_size)
+                    break;
+                for (size_t n = 0; n < 4096; n += 1)
+                {
+                    rand *= m + n * 2;
+                    size_t a = rand % (in_size - diff_opt);
+                    int16_t diff = (int16_t)data[in_start + a] - (int16_t)data[in_start + a + diff_opt];
+                    diff = diff < 0 ? -diff : diff;
+                    diff_difference += diff;
+                }
+                diff_difference /= 4096;
+                // 2x to prevent noise from triggering differentiation when it's not necessary
+                if (diff_difference * 2 < orig_difference && diff_difference < difference)
+                {
+                    difference = diff_difference;
+                    do_diff = diff_opt;
+                }
+            }
+        }
+        
         if (do_diff)
         {
             for (size_t i = buf.len - 1; i >= do_diff; i -= 1)
                 buf.data[i] -= buf.data[i - do_diff];
         }
+        
+        loh_byte_buffer orig_buf = buf;
+        
+        size_t lb_comp_ratio_100 = 100;
+        
         if (do_lookback)
         {
             loh_byte_buffer new_buf = lookback_compress(buf.data, buf.len, do_lookback);
             if (new_buf.len < buf.len)
             {
+                lb_comp_ratio_100 = new_buf.len * 100 / buf.len;
                 if (buf.data != raw_data)
                     LOH_FREE(buf.data);
                 buf = new_buf;
@@ -1030,6 +1083,7 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
                 do_lookback = 0;
             }
         }
+        uint8_t did_huff = 0;
         if (do_huff)
         {
             loh_byte_buffer new_buf = huff_pack(buf.data, buf.len).buffer;
@@ -1038,17 +1092,33 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
                 if (buf.data != raw_data)
                     LOH_FREE(buf.data);
                 buf = new_buf;
+                did_huff = 1;
+                
+                // if we did lookback but it's tenuous, try huff-compressing the original data too to see if it comes out smaller
+                
+                if (do_lookback && (lb_comp_ratio_100 > 80 || (do_diff != 0 && lb_comp_ratio_100 > 30)))
+                {
+                    loh_byte_buffer new_buf_2 = huff_pack(orig_buf.data, orig_buf.len).buffer;
+                    
+                    if (new_buf_2.len < buf.len)
+                    {
+                        buf = new_buf_2;
+                        do_lookback = 0;
+                    }
+                    else
+                        LOH_FREE(new_buf_2.data);
+                }
             }
             else
             {
                 LOH_FREE(new_buf.data);
-                do_huff = 0;
+                did_huff = 0;
             }
         }
         
         byte_push(&real_buf, do_diff);
         byte_push(&real_buf, do_lookback);
-        byte_push(&real_buf, do_huff);
+        byte_push(&real_buf, did_huff);
         byte_push(&real_buf, 0);
         bytes_push(&real_buf, buf.data, buf.len);
         
