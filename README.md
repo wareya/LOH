@@ -98,7 +98,7 @@ data/unifont-jp.tga.-11.br | **1055 KB** | 153.028s | 0.156s
 
 (LZ4 has a maximum compression ratio of 1:256-ish, because of how it stores long integers.)
 
-With threading enabled:
+### Threaded time results
 
 Name | Size | Compress time | Decompress time
 -|-|-|-
