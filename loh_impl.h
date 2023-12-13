@@ -249,26 +249,27 @@ static inline void hashmap_insert(loh_hashmap * hashmap, const uint8_t * bytes, 
 }
 
 // bytes must point to four characters and be inside of buffer
-static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_t * buffer, const size_t buffer_len, uint64_t * min_len)
+static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_t * input, const size_t buffer_len, const size_t pre_context, uint64_t * min_len, size_t * back_distance)
 {
-    const uint8_t * bytes = &buffer[i];
+    const uint8_t * bytes = &input[i];
     const uint32_t key_i = hashmap_hash(hashmap, bytes);
     const uint32_t key = key_i << hashmap->hash_shl;
     
     // look for match within key
     uint64_t best = -1;
     uint64_t best_size = loh_min_lookback_length - 1;
+    uint64_t best_d = 0;
     for (uint16_t j = 0; j < hashmap->hash_i_max; j++)
     {
         // cycle from newest to oldest
         int n = (hashmap->hashtable_i[key_i] + hashmap->hash_i_max - 1 - j) & hashmap->hash_i_mask;
-        const uint64_t value = hashmap->hashtable[key + n];
+        uint64_t value = hashmap->hashtable[key + n];
         
         if (value >= i)
             break;
         
         // early-out for things that can't possibly be an (efficient) match
-        if (bytes[0] != buffer[value] || bytes[1] != buffer[value + 1] || bytes[2] != buffer[value + 2])
+        if (bytes[0] != input[value] || bytes[1] != input[value + 1] || bytes[2] != input[value + 2])
             continue;
         
         // find longest match
@@ -281,13 +282,23 @@ static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_
             remaining = good_enough_length;
         
         uint64_t size = 0;
-        while (size < remaining && bytes[size] == buffer[value + size])
+        while (size < remaining && bytes[size] == input[value + size])
             size += 1;
+        
+        size_t d = 1;
+        while (value > 0 && input[i - d] == input[value - 1] && d < pre_context)
+        {
+            value -= 1;
+            size += 1;
+            d += 1;
+        }
+        d -= 1;
         
         if (size > best_size || (size == best_size && value > best))
         {
             best_size = size;
             best = value;
+            best_d = d;
             
             if (best_size >= good_enough_length)
                 break;
@@ -295,6 +306,7 @@ static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_
     }
     
     *min_len = best_size;
+    *back_distance = best_d;
     return best;
 }
 
@@ -305,7 +317,7 @@ static const size_t loh_size_mask = (1 << loh_size_bits) - 1;
 static const size_t loh_dist_bits = 6 - loh_size_bits;
 static const size_t loh_dist_mask = (1 << loh_dist_bits) - 1;
 
-static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const size_t i, const uint8_t * input, const uint64_t input_len, const uint8_t final, uint64_t * out_size)
+static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const size_t i, const uint8_t * input, const uint64_t input_len, const size_t pre_context, uint64_t * out_size, size_t * out_back_distance)
 {
     // here we only return the hashmap hit if it would be efficient to code it
     
@@ -314,13 +326,14 @@ static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const siz
         return -1;
     
     uint64_t size = 0;
-    const uint64_t found_loc = hashmap_get(hashmap, i, input, input_len, &size);
+    size_t back_distance = 0;
+    const uint64_t found_loc = hashmap_get(hashmap, i, input, input_len, pre_context, &size, &back_distance);
     uint64_t dist = i - found_loc;
     if (found_loc != (uint64_t)-1 && found_loc < i)
     {
         // find true length of match match
         // (this is significantly faster than testing byte-by-byte)
-        while (size < remaining && input[i + size] == input[found_loc + size])
+        while (size < remaining && input[i - back_distance + size] == input[found_loc + size])
             size += 1;
         
         size_t dist_max_next = loh_dist_mask + 1;
@@ -340,12 +353,13 @@ static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const siz
         if (size - loh_min_lookback_length > loh_size_mask)
             overhead += 1;
         
-        if (!final) // cost of switching out of literal mode
+        if (pre_context != 0) // cost of switching out of literal mode
             overhead += 1;
         
         if (overhead < size)
         {
             *out_size = size;
+            *out_back_distance = back_distance;
             return found_loc;
         }
     }
@@ -499,16 +513,12 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
         uint64_t size = 0;
         while (i + size < input_len)
         {
+            size_t back_distance = 0;
             if (i + size + LOH_HASH_LENGTH < input_len)
-                found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size == 0, &found_size);
+                found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size, &found_size, &back_distance);
             if (found_size != 0)
             {
-                while (size != 0 && size - 1 > 0 && i + size - 1 > 0 && found_loc != 0 && found_loc - 1 > 0 && input[i + size - 1] == input[found_loc - 1])
-                {
-                    size -= 1;
-                    found_loc -= 1;
-                    found_size += 1;
-                }
+                size -= back_distance;
                 break;
             }
             // need to update the hashmap mid-literal
