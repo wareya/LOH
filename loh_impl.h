@@ -1017,6 +1017,7 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
         int64_t difference = 0;
         uint64_t rand = 19529;
         const uint64_t m = 0xA68BF0C7;
+        uint8_t seen_values[256] = {0};
         for (size_t n = 0; n < 4096; n += 1)
         {
             rand *= m + n * 2;
@@ -1026,13 +1027,19 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
             int16_t diff = (int16_t)data[in_start + a] - (int16_t)data[in_start + b];
             diff = diff < 0 ? -diff : diff;
             difference += diff;
+            seen_values[data[in_start + a]] = 1;
+            seen_values[data[in_start + b]] = 1;
         }
+        // to prevent differentiating files that only have a small number of unique values (doing so thrashes the entropy coder)
+        uint16_t num_seen_values = 0;
+        for (size_t n = 0; n < 256; n++)
+            num_seen_values += seen_values[n];
         difference /= 4096;
         
         int64_t orig_difference = difference;
         
         // now check 1 through 16 as possible differentiation values, using a similar strategy
-        if (!do_diff)
+        if (!do_diff && num_seen_values > 128)
         {
             for (uint8_t diff_opt = 1; diff_opt <= 16; diff_opt += 1)
             {
