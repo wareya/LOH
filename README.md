@@ -22,7 +22,7 @@ Not fuzzed. However, the compressor is probably perfectly safe, and the decompre
 
 Made with the gzip, lz4, brotli, and zstd commands, and loh.c compiled as -O3 (without -march=native). Ran on a Steam Deck in desktop mode. Dashes refer to compression level.
 
-Times are the average of five runs or however many runs it took to break 10 total seconds, whichever was fewer.
+Times are the **average of 5 runs** or however many runs it took to **break 10 total seconds**, whichever was fewer.
 
 Name | Size | Compress time | Decompress time
 -|-|-|-
@@ -97,6 +97,40 @@ data/unifont-jp.tga.-19.zst | 1258 KB | 20.619s | **0.072s**
 data/unifont-jp.tga.-11.br | **1055 KB** | 153.028s | 0.156s
 
 (LZ4 has a maximum compression ratio of 1:256-ish, because of how it stores long integers.)
+
+With threading enabled:
+
+Name | Size | Compress time | Decompress time
+-|-|-|-
+data/cc0_photo.tga | 3728 KB | - | -
+data/cc0_photo.tga.loh | 2051 KB | 0.071s | 0.02s
+data/cc0_photo.tga.-9.loh | 2051 KB | 0.296s | 0.019s
+-|-|-|-
+data/blake recorded 11.wav | 27002 KB | - | -
+data/blake recorded 11.wav.loh | 24270 KB | 0.47s | 0.14s
+data/blake recorded 11.wav.-9.loh | 24270 KB | 3.448s | 0.156s
+-|-|-|-
+data/moby dick.txt | 1246 KB | - | -
+data/moby dick.txt.loh | 600 KB | 0.029s | 0.012s
+data/moby dick.txt.-9.loh | 575 KB | 0.085s | 0.008s
+-|-|-|-
+data/oops all zeroes.bin | 27002 KB | - | -
+data/oops all zeroes.bin.loh | 168 Bytes | 0.061s | 0.083s
+data/oops all zeroes.bin.-9.loh | 168 Bytes | 0.07s | 0.073s
+-|-|-|-
+data/white noise.bin | 27002 KB | - | -
+data/white noise.bin.loh | 27002 KB | 0.398s | 0.052s
+data/white noise.bin.-9.loh | 27002 KB | 3.469s | 0.069s
+-|-|-|-
+data/Godot_v4.1.3-stable_win64.exe | 117559 KB | - | -
+data/Godot_v4.1.3-stable_win64.exe.loh | 58521 KB | 1.451s | 0.637s
+data/Godot_v4.1.3-stable_win64.exe.-9.loh | 56696 KB | 8.701s | 0.685s
+-|-|-|-
+data/unifont-jp.tga | 65537 KB | - | -
+data/unifont-jp.tga.loh | 2963 KB | 0.245s | 0.162s
+data/unifont-jp.tga.-9.loh | 2088 KB | 0.261s | 0.156s
+
+As explained in the first section, this is purely a proof of concept; it still loads the entire file to memory all at once on a single thread before compressing or decompressing it. This is the main reason why decompression isn't 4x as fast with threading enabled.
 
 ## Format
 
