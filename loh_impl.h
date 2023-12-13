@@ -502,7 +502,15 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
             if (i + size + LOH_HASH_LENGTH < input_len)
                 found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size == 0, &found_size);
             if (found_size != 0)
+            {
+                while (size != 0 && size - 1 > 0 && i + size - 1 > 0 && found_loc != 0 && found_loc - 1 > 0 && input[i + size - 1] == input[found_loc - 1])
+                {
+                    size -= 1;
+                    found_loc -= 1;
+                    found_size += 1;
+                }
                 break;
+            }
             // need to update the hashmap mid-literal
             if (i + size + LOH_HASH_LENGTH < input_len)
                 hashmap_insert(&hashmap, &input[i + size], i + size);
