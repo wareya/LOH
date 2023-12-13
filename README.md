@@ -18,7 +18,7 @@ Not fuzzed. However, the compressor is probably perfectly safe, and the decompre
 
 ## Comparison
 
-Made with the gzip, lz4, brotli, and zstd commands, and loh.c compiled as -O3 (without -march=native). Ran on a Steam Deck in desktop mode. Dashes refer to compression level. LOH has technique flags, so the technique flags that differ from the defaults are noted instead (- means lookback, h means Huffman, d means delta). The best flags are used for the given file. If the default flags are the best, alternative flags are not attempted. For LOH, both the default (4) and maximum (9) quality level are attempted.
+Made with the gzip, lz4, brotli, and zstd commands, and loh.c compiled as -O3 (without -march=native). Ran on a Steam Deck in desktop mode. Dashes refer to compression level.
 
 Times are the average of five runs or however many runs it took to break 10 total seconds, whichever was fewer.
 Name | Size | Compress time | Decompress time
