@@ -111,6 +111,8 @@ These steps are performed in order on the entire output of the previous stage. S
 
 All three steps are optional, and whether they're done is stored in the header. This means you can use LOH as a preprocessor or postprocessor for other formats, e.g. applying delta coding to an image before `zip`ing it, or applying Huffman coding to an `lz4` file.
 
+Each step is applied to arbitrarily-sized chunks, which are listed by start location (both in the compressed and decompressed file) after the LOH file's header. For simplicity's sake, the encoder splits the file into 4 chunks, or chunks with 32k source file length, whichever results in bigger chunks.
+
 ### Lookback
 
 The LZSS-style layer works strictly with bytes, not with a bitstream.
@@ -183,13 +185,25 @@ while (size_continues)
 
 This slightly complicates encoding/decoding but gives a "free" entropy savings that allows the entropy coder to be more efficient.
 
+Lookback commands cannot reference data from previous chunks. In theory, this allows for parallel encoding and decoding.
+
 ### Huffman coding
 
 LOH uses canonical Huffman codes to allow for faster decoding.
 
+The huffman stream is split up into chunks. Each chunk has its own code table, and is prefixed by a 32-bit length. For simplicity's sake, the encoder strictly works with 32k-sized chunks. These chunks are in addition to the LOH-file-global chunks.
+
 Also, this stage uses individual bit access, unlike the lookback stage. The encoder writes bits starting with the first bit in the least-significant bit of the first byte (the 1 bit), going up to the most-significant bit (the 128 bit), then going on to the 1 bit of the second byte, and so on.
 
-The Huffman code table is stored at the start of the output of this stage, in order from shortest to longest code, in order of code value, starting with a code length of 1. The encoder outputs a `1` bit to indicate that it's moved on to the next code length, or a `0` to indicate that there's another symbol associated with this code length, followed by whatever that symbol is. Symbols are encoded least-significant-bit-first. So, if the shortest code is 3 bits long, and maps to the character 'a' (byte 0x61), then the encoder ouputs `1`, `1` (advance from length 1 to 2, then from 2 to 3), `0`, (symbol at current code length follows), `1`, `0`, `0`, `0`, `0`, `1`, `1`, `0` (bits of 0x61 in order). In a hex editor, this would look like `0B 03`. This is space-inefficient, but allows for near-ideally-fast construction of all the relevant tables while decoding the huffman code table..
+The Huffman code table is stored at the start of the output of this stage, in order from shortest to longest code, in order of code value, starting with a code length of 1. The encoder outputs a `1` bit to indicate that it's moved on to the next code length, or a `0` to indicate that there's another symbol associated with this code length, followed by whatever that symbol is. Symbols are encoded as a difference from the previous symbol, with that difference encoded like:
+
+```
+0 : 1
+10 : 2
+110 : 3
+1110 : 4
+1111xxxxxxxx : all other diffs (the x bits are least-significant-first)
+```
 
 Before the code table, the number of symbols coded in it minus one is written as an 8-bit integer. So if there are 8 symbols `0x07` is written. This is how the decoder knows when to stop decoding the code table and start decoding the compressed data.
 

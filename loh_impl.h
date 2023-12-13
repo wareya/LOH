@@ -602,11 +602,11 @@ static int huff_len_compare(const void * a, const void * b)
         return -1;
     else if (len_a > len_b)
         return 1;
-    int64_t freq_a = (*(huff_node_t**)a)->freq;
-    int64_t freq_b = (*(huff_node_t**)b)->freq;
-    if (freq_a > freq_b)
+    uint8_t part_a = (*(huff_node_t**)a)->symbol;
+    uint8_t part_b = (*(huff_node_t**)b)->symbol;
+    if (part_a < part_b)
         return -1;
-    else if (freq_a < freq_b)
+    else if (part_a > part_b)
         return 1;
     return 0;
 }
@@ -618,13 +618,15 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
     bits_push(&ret, len, 8*8);
     
     // The huffman stage is split up into chunks, so that each chunk can have a more ideal huffman code.
-    // The chunk size is arbitrary, but for the sake of simplicity, this encoder uses a fixed 64k chunk size.
+    // The chunk size is arbitrary, but for the sake of simplicity, this encoder uses a fixed 32k chunk size.
     // Each chunk is prefixed with a byte-aligned 32-bit integer giving the number of output tokens in the chunk.
     
-    uint64_t chunk_size = (1 << 16);
+    uint64_t chunk_size = (1 << 15);
     uint64_t chunk_count = (len + chunk_size - 1) / chunk_size;
     
     //uint64_t header_overhead_bytes = 0;
+    
+    //size_t diff_counts[256] = {0};
     
     for (uint32_t chunk = 0; chunk < chunk_count; chunk += 1)
     {
@@ -821,11 +823,16 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
             canon_code += 1;
         }
         
+        /*
         // Our canonical length-limited huffman code is finally done!
         // To print it out (with modified frequencies):
-        /*
+        uint8_t _prev_symbol = 0;
         for (size_t c = 0; c < symbol_count; c += 1)
         {
+            uint8_t d = unordered_dict[c]->symbol - _prev_symbol;
+            diff_counts[d] += 1;
+            _prev_symbol = unordered_dict[c]->symbol;
+            
             printf("%02X: ", unordered_dict[c]->symbol);
             for (size_t i = 0; i < unordered_dict[c]->code_len; i++)
                 printf("%c", ((unordered_dict[c]->code >> i) & 1) ? '1' : '0');
@@ -842,6 +849,7 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
         // start at code length 1
         // bit 1: add 1 to code length
         // bit 0: read next 8 bits as symbol for next code. add 1 to code
+        uint8_t prev_symbol = 0;
         if (len > 0)
         {
             bits_push(&ret, symbol_count - 1, 8);
@@ -854,7 +862,25 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
                     code_depth += 1;
                 }
                 bit_push(&ret, 0);
-                bits_push(&ret, unordered_dict[i]->symbol, 8);
+                uint8_t diff = unordered_dict[i]->symbol - prev_symbol;
+                
+                // stored as diffs
+                // 0 : 1
+                // 10 : 2
+                // 110 : 3
+                // 1110 : 4
+                // 1111xxxxxxxx : other
+                if (diff >= 1 && diff <= 4)
+                {
+                    bits_push(&ret, 0xFF, diff - 1);
+                    bit_push(&ret, 0);
+                }
+                else
+                {
+                    bits_push(&ret, 0xFF, 4);
+                    bits_push(&ret, diff, 8);
+                }
+                prev_symbol = unordered_dict[i]->symbol;
             }
         }
         
@@ -879,6 +905,14 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
         else if (symbol_count == 1)
             free_huff_nodes(unordered_dict[0]);
     }
+    
+    /*
+    for (size_t s = 0; s < 256; s += 1)
+    {
+        printf("%02X : %d\n", s, diff_counts[s]);
+    }
+    */
+    
     //printf("huff table overhead: %lld\n", header_overhead_bytes);
     return ret;
 }
@@ -905,7 +939,7 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
         chunk_size = (1 << 15);
     uint64_t chunk_count = (len + chunk_size - 1) / chunk_size;
     
-    printf("%lld\n", chunk_count);
+    //printf("%lld\n", chunk_count);
     
     loh_byte_buffer real_buf = {0, 0, 0};
     
@@ -1131,6 +1165,7 @@ static loh_byte_buffer huff_unpack(loh_bit_buffer * buf, int * error)
         uint8_t symbols[32768] = {0};
         uint16_t code_value = 0;
         size_t code_depth = 1;
+        uint8_t prev_symbol = 0;
         for (size_t i = 0; i < symbol_count; i++)
         {
             uint8_t bit = bit_pop(buf);
@@ -1145,7 +1180,22 @@ static loh_byte_buffer huff_unpack(loh_bit_buffer * buf, int * error)
                     return ret;
                 }
             }
-            uint8_t symbol = bits_pop(buf, 8);
+            
+            // stored as diffs
+            // 0 : 1
+            // 10 : 2
+            // 110 : 3
+            // 1110 : 4
+            // 1111xxxxxxxx : other
+            uint8_t diff = 1 + bit_pop(buf);
+            diff += diff == 2 && bit_pop(buf);
+            diff += diff == 3 && bit_pop(buf);
+            diff += diff == 4 && bit_pop(buf);
+            if (diff == 5)
+                diff = bits_pop(buf, 8);
+            
+            uint8_t symbol = prev_symbol + diff;
+            prev_symbol += diff;
             
             symbols[code_value] = symbol;
             max_codes[code_depth] = code_value + 1;
