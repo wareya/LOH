@@ -191,7 +191,7 @@ Lookback commands cannot reference data from previous chunks. In theory, this al
 
 LOH uses canonical Huffman codes to allow for faster decoding.
 
-The huffman stream is split up into chunks. Each chunk has its own code table, and is prefixed by a 32-bit length. For simplicity's sake, the encoder strictly works with 32k-sized chunks. These chunks are in addition to the LOH-file-global chunks.
+The huffman stream is split up into chunks. Each chunk has its own code table, and is prefixed by a 32-bit output length. For simplicity's sake, the encoder strictly works with 32k-sized chunks. These chunks are in addition to the LOH-file-global chunks. These chunks have a bit at the beginning (after their output length) that's 1 if they're incompressible, and stored as raw bytes, or 0 if they're compressed.
 
 Also, this stage uses individual bit access, unlike the lookback stage. The encoder writes bits starting with the first bit in the least-significant bit of the first byte (the 1 bit), going up to the most-significant bit (the 128 bit), then going on to the 1 bit of the second byte, and so on.
 
