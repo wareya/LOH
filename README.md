@@ -14,7 +14,7 @@ This project compiles cleanly both as C and C++ code without warnings or errors.
 
 Not fuzzed. However, the compressor is probably perfectly safe, and the decompressor is probably safe on trusted/correct data.
 
-\* Around 880 lines of actual code according to `cloc`. The file itself is over 1k lines because it's well-commented.
+\* Around 1000 lines of actual code according to `cloc`. The file itself is over 1k lines because it's well-commented.
 
 ## Comparison
 
@@ -25,9 +25,9 @@ Times are the average of five runs or however many runs it took to break 10 tota
 Name  |  Size  |  Compress time  |  Decompress time
 -|-|-|-
 data/cc0_photo.tga | 3728 KB | - | -
-data/cc0_photo.tga.loh | 2597 KB | 0.125s | 0.048s
-data/cc0_photo.tga.-9.loh | 2575 KB | 0.697s | 0.05s
-data/cc0_photo.tga.-0d3.loh | 2051 KB | **0.054s** | 0.048s
+data/cc0_photo.tga.loh | 2596 KB | 0.117s | 0.049s
+data/cc0_photo.tga.loh | 2575 KB | 0.677s | 0.056s
+data/cc0_photo.tga.l0d3.loh | 2051 KB | **0.05s** | 0.048s
 data/cc0_photo.tga.-5.gz | 2473 KB | 0.171s | 0.03s
 data/cc0_photo.tga.-9.gz | 2466 KB | 0.262s | 0.033s
 data/cc0_photo.tga.-5.lz4 | 2777 KB | 0.116s | 0.013s
@@ -36,10 +36,10 @@ data/cc0_photo.tga.-19.zst | 2328 KB | 1.031s | 0.013s
 data/cc0_photo.tga.-11.br | **2069 KB** | 12.242s | 0.039s
 -|-|-|-
 data/blake recorded 11.wav | 27002 KB | - | -
-data/blake recorded 11.wav.loh | 25995 KB | 0.788s | 0.3s
-data/blake recorded 11.wav.-9.loh | 25980 KB | 10.259s | 0.316s
-data/blake recorded 11.wav.d4.loh | 24327 KB | **0.515s** | 0.277s
-data/blake recorded 11.wav.d4.loh | **24306 KB** | 10.289s | 0.286s
+data/blake recorded 11.wav.loh | 25995 KB | 0.78s | 0.297s
+data/blake recorded 11.wav.loh | 25980 KB | 10.355s | 0.327s
+data/blake recorded 11.wav.d4.loh | 24326 KB | 0.515s | 0.288s
+data/blake recorded 11.wav.d4.loh | 24306 KB | 10.418s | 0.306s
 data/blake recorded 11.wav.-5.gz | 25920 KB | 0.859s | 0.192s
 data/blake recorded 11.wav.-9.gz | 25910 KB | 1.132s | 0.189s
 data/blake recorded 11.wav.-5.lz4 | 26404 KB | 0.719s | 0.073s
