@@ -2,7 +2,7 @@
 #define LOH_IMPL_HEADER
 
 /*
-    LOH (LOokahead + Huffman)
+    LOH (LOokback + Huffman)
     Single-header compression/decompression library.
     Uses a bespoke format.
     You probably want these functions:
