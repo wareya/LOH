@@ -27,7 +27,7 @@ Name  |  Size  |  Compress time  |  Decompress time
 data/cc0_photo.tga | 3728 KB | - | -
 data/cc0_photo.tga.loh | 2595 KB | 0.15s | 0.05s
 data/cc0_photo.tga.loh | 2575 KB | 0.704s | 0.045s
-data/cc0_photo.tga.l0d3.loh | **2051 KB** | **0.057s** | 0.05s
+data/cc0_photo.tga.-0.d3.loh | **2051 KB** | **0.057s** | 0.05s
 data/cc0_photo.tga.-5.gz | 2473 KB | 0.171s | 0.03s
 data/cc0_photo.tga.-9.gz | 2466 KB | 0.262s | 0.033s
 data/cc0_photo.tga.-5.lz4 | 2777 KB | 0.116s | 0.013s
