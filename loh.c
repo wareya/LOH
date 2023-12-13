@@ -8,9 +8,6 @@
 #include "loh_impl_threaded.h"
 #endif
 
-#define SDEFL_IMPLEMENTATION
-#include "thirdparty/sdefl.h"
-
 int main(int argc, char ** argv)
 {
     if (argc < 4 || (argv[1][0] != 'z' && argv[1][0] != 'x'))
