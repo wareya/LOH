@@ -100,6 +100,8 @@ data/unifont-jp.tga.-11.br | **1055 KB** | 153.028s | 0.156s
 
 ### Threaded time results
 
+Operating with four threads, which is the default (hardcoded) number of chunks.
+
 Name | Size | Compress time | Decompress time
 -|-|-|-
 data/cc0_photo.tga | 3728 KB | - | -
