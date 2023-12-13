@@ -286,7 +286,7 @@ static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_
             size += 1;
         
         size_t d = 1;
-        while (value > 0 && input[i - d] == input[value - 1] && d < pre_context)
+        while (value > 0 && input[i - d] == input[value - 1] && d <= pre_context)
         {
             value -= 1;
             size += 1;
