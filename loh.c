@@ -4,6 +4,9 @@
 
 #include "loh_impl.h"
 
+#define SDEFL_IMPLEMENTATION
+#include "thirdparty/sdefl.h"
+
 int main(int argc, char ** argv)
 {
     if (argc < 4 || (argv[1][0] != 'z' && argv[1][0] != 'x'))
@@ -65,7 +68,21 @@ int main(int argc, char ** argv)
         if (argc > 6)
             do_diff = strtol(argv[6], 0, 10);
         
+        #if 1
         buf.data = loh_compress(buf.data, buf.len, do_lookback, do_huff, do_diff, &buf.len);
+        #else
+        struct sdefl s;
+        memset(&s, 0, sizeof(struct sdefl));
+        int bound = sdefl_bound(buf.len);
+        uint8_t * out = (uint8_t *)malloc(bound);
+        buf.len = zsdeflate(&s, out, buf.data, buf.len, 5);
+        if (!out)
+        {
+            puts("asdgkoreogr");
+            return;
+        }
+        buf.data = out;
+        #endif
         
         FILE * f2 = fopen(argv[3], "wb");
         
