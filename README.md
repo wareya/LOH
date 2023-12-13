@@ -6,6 +6,8 @@ Public domain, extremely small* lookback (LZSS) and Huffman compression, with op
 
 LOH's compressor is fast, and its decompressor is slightly slower than `unzip` and `lz4` (the commands). Its compression ratio is mediocre, except on uncompressed audio and images, where it outperforms codecs that don't support delta coding, and files that are overwhelmingly dominated by a single byte value, where it outperforns most codecs, including `zip` and `lz4` (the commands).
 
+LOH's container format design **supports multithreading** and some amount of from-the-middle decompression; files are split up into an arbitrary number of completely independent chunks (up to 4 in the reference compressor) that can be compressed and decompressed in any order (or in parallel). `loh_impl_threaded.h` implements threaded versions of the compression/decompression functions from `loh_impl.h`, and is used by `loh.c` (the example application, a CLI compression tool) if compiled with -DTHREADED. However, this is purely a proof of concept; it still loads the entire file to memory all at once on a single thread before compressing or decompressing it. This is a limitation of the example implementation, not of the format. The more chunks, and thus the more possible parallelism, the worst the compression.
+
 LOH is meant to be embedded into other applications, not used as a general purpose compression tool. The encoder and decoder implemented here are not streaming, but streaming encoders and decoders are possible and shouldn't be too hard to write.
 
 LOH is good for applications that have to compress lots of data quickly, especially images, and also for applications that need a single-header compression library.
