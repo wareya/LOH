@@ -52,7 +52,7 @@ data/moby dick.txt.loh | 604 KB | 0.049s | 0.02s
 data/moby dick.txt.-9.loh | 575 KB | 0.146s | 0.015s
 data/moby dick.txt.-5.gz | 508 KB | 0.06s | 0.009s
 data/moby dick.txt.-9.gz | 499 KB | 0.13s | 0.01s
-data/moby dick.txt.-5.lz4 | 591 KB | 0.044s | 0.005s
+data/moby dick.txt.-5.lz4 | 591 KB | **0.044s** | 0.005s
 data/moby dick.txt.-9.lz4 | 583 KB | 0.079s | 0.006s
 data/moby dick.txt.-19.zst | 412 KB | 0.689s | **0.005s**
 data/moby dick.txt.-11.br | **403 KB** | 2.38s | 0.008s
