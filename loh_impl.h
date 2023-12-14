@@ -268,8 +268,10 @@ static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_
         if (value >= i)
             break;
         
-        // early-out for things that can't possibly be an (efficient) match
-        if (bytes[0] != input[value] || bytes[1] != input[value + 1] || bytes[2] != input[value + 2])
+        // early-out for things that probably aren't going to be an (efficient) match
+        // (because of backwardsing, shorter rightwards matches are sometimes longer... but not often)
+        if (bytes[0] != input[value] || bytes[1] != input[value + 1]
+            || (best_size >= 2 && (bytes[best_size - 1] != input[value + best_size - 1] || bytes[best_size - 2] != input[value + best_size - 2])))
             continue;
         
         // find longest match
@@ -300,7 +302,7 @@ static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_
             best = value;
             best_d = d;
             
-            if (best_size >= good_enough_length)
+            if (size >= good_enough_length || size >= remaining)
                 break;
         }
     }
@@ -327,7 +329,7 @@ static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const siz
     
     uint64_t size = 0;
     size_t back_distance = 0;
-    const uint64_t found_loc = hashmap_get(hashmap, i, input, input_len, pre_context, &size, &back_distance);
+    uint64_t found_loc = hashmap_get(hashmap, i, input, input_len, pre_context, &size, &back_distance);
     uint64_t dist = i - found_loc;
     if (found_loc != (uint64_t)-1 && found_loc < i)
     {
@@ -335,6 +337,13 @@ static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const siz
         // (this is significantly faster than testing byte-by-byte)
         while (size < remaining && input[i - back_distance + size] == input[found_loc + size])
             size += 1;
+        
+        while (back_distance < pre_context && found_loc > 0 && input[i - back_distance - 1] == input[found_loc - 1])
+        {
+            found_loc -= 1;
+            size += 1;
+            back_distance += 1;
+        }
         
         size_t dist_max_next = loh_dist_mask + 1;
         size_t dist_byte_count = 1;
@@ -394,6 +403,8 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
     hashmap.hashtable = (uint64_t *)LOH_MALLOC(sizeof(uint64_t) * hash_capacity);
     if (!hashmap.hashtable)
         return ret;
+    
+    printf("%lld %lld\n", sizeof(uint64_t) * hash_capacity, sizeof(uint8_t) * hash_i_capacity);
     
     hashmap.hashtable_i = (uint8_t *)LOH_MALLOC(sizeof(uint8_t) * hash_i_capacity);
     if (!hashmap.hashtable_i)
@@ -521,14 +532,20 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
                 found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size, &found_size, &back_distance);
             if (found_size != 0)
             {
-                uint64_t found_size_2 = 0;
-                size_t back_distance_2 = 0;
-                // zlib-style "lazy" matching: only commit to the match if the next position doesn't give a better match
-                if (i + size + 1 + LOH_HASH_LENGTH < input_len)
+                uint64_t start_size = size;
+                // zlib-style "lazy" search: only confirm the match if the next byte isn't a good match too
+                if (found_size < 64 && i + start_size + 1 + LOH_HASH_LENGTH < input_len)
                 {
-                    hashmap_get_if_efficient(&hashmap, i + size + 1, input, input_len, size + 1, &found_size_2, &back_distance_2);
-                    if (found_size_2 > found_size)
-                        found_size = 0;
+                    uint64_t found_size_2 = 0;
+                    size_t back_distance_2 = 0;
+                    uint64_t found_loc_2 = hashmap_get_if_efficient(&hashmap, i + start_size + 1, input, input_len, start_size + 1, &found_size_2, &back_distance_2);
+                    if (found_size_2 >= found_size + 1)
+                    {
+                        size = start_size + 1;
+                        found_loc = found_loc_2;
+                        found_size = found_size_2;
+                        back_distance = back_distance_2;
+                    }
                 }
                 if (found_size != 0)
                 {
