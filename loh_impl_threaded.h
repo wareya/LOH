@@ -111,7 +111,7 @@ static void * loh_compress_threaded_single(void * _args)
     uint8_t did_huff = 0;
     if (do_huff)
     {
-        loh_byte_buffer new_buf = huff_pack(buf.data, buf.len).buffer;
+        loh_byte_buffer new_buf = huff_pack(buf.data, buf.len, quality_level).buffer;
         if (new_buf.len < buf.len)
         {
             if (buf_replaced)
@@ -124,7 +124,7 @@ static void * loh_compress_threaded_single(void * _args)
             
             if (quality_level && (lb_comp_ratio_100 > 80 || (do_diff != 0 && lb_comp_ratio_100 > 30)))
             {
-                loh_byte_buffer new_buf_2 = huff_pack(orig_buf.data, orig_buf.len).buffer;
+                loh_byte_buffer new_buf_2 = huff_pack(orig_buf.data, orig_buf.len, quality_level).buffer;
                 
                 if (new_buf_2.len < buf.len)
                 {
