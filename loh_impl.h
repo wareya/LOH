@@ -397,7 +397,10 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
     
     hashmap.hashtable_i = (uint8_t *)LOH_MALLOC(sizeof(uint8_t) * hash_i_capacity);
     if (!hashmap.hashtable_i)
+    {
+        LOH_FREE(hashmap.hashtable);
         return ret;
+    }
     
     hashmap.hash_size = hash_size;
     hashmap.hash_shl = hash_shl;
@@ -518,8 +521,20 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
                 found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size, &found_size, &back_distance);
             if (found_size != 0)
             {
-                size -= back_distance;
-                break;
+                uint64_t found_size_2 = 0;
+                size_t back_distance_2 = 0;
+                // zlib-style "lazy" matching: only commit to the match if the next position doesn't give a better match
+                if (i + size + 1 + LOH_HASH_LENGTH < input_len)
+                {
+                    hashmap_get_if_efficient(&hashmap, i + size + 1, input, input_len, size + 1, &found_size_2, &back_distance_2);
+                    if (found_size_2 > found_size)
+                        found_size = 0;
+                }
+                if (found_size != 0)
+                {
+                    size -= back_distance;
+                    break;
+                }
             }
             // need to update the hashmap mid-literal
             if (i + size + LOH_HASH_LENGTH < input_len)
