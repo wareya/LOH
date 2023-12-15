@@ -1016,6 +1016,8 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
         
         int64_t orig_difference = difference;
         
+        uint8_t did_diff = do_diff;
+        
         // now check 1 through 16 as possible differentiation values, using a similar strategy
         if (!do_diff && num_seen_values > 128)
         {
@@ -1037,15 +1039,15 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
                 if (diff_difference * 2 < orig_difference && diff_difference < difference)
                 {
                     difference = diff_difference;
-                    do_diff = diff_opt;
+                    did_diff = diff_opt;
                 }
             }
         }
         
-        if (do_diff)
+        if (did_diff)
         {
-            for (size_t i = buf.len - 1; i >= do_diff; i -= 1)
-                buf.data[i] -= buf.data[i - do_diff];
+            for (size_t i = buf.len - 1; i >= did_diff; i -= 1)
+                buf.data[i] -= buf.data[i - did_diff];
         }
         
         loh_byte_buffer orig_buf = buf;
@@ -1083,7 +1085,7 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
                 
                 // if we did lookback but it's tenuous, try huff-compressing the original data too to see if it comes out smaller
                 
-                if (did_lookback && (lb_comp_ratio_100 > 80 || (do_diff != 0 && lb_comp_ratio_100 > 30)))
+                if (did_lookback && (lb_comp_ratio_100 > 80 || (did_diff != 0 && lb_comp_ratio_100 > 30)))
                 {
                     loh_byte_buffer new_buf_2 = huff_pack(orig_buf.data, orig_buf.len).buffer;
                     
@@ -1103,7 +1105,7 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
             }
         }
         
-        byte_push(&real_buf, do_diff);
+        byte_push(&real_buf, did_diff);
         byte_push(&real_buf, did_lookback);
         byte_push(&real_buf, did_huff);
         byte_push(&real_buf, 0);

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #ifndef THREADED
-#include "loh_lite.h"
+#include "loh_impl.h"
 #else
 #include "loh_impl_threaded.h"
 #endif

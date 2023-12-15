@@ -158,6 +158,9 @@ static uint8_t * loh_compress_threaded(uint8_t * data, size_t len, uint8_t do_lo
 {
     if (!data || !out_len) return 0;
     
+    if (do_lookback > 12)
+        do_lookback = 12;
+    
     uint32_t checksum = loh_checksum(data, len);
     
     // LOH files are composed of a series of arbitrary-length chunks.
