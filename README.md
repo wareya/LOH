@@ -24,7 +24,7 @@ Made with the gzip, lz4, brotli, and zstd commands, and loh.c compiled as -O3 (w
 
 Times are the **average of 5 runs** or however many runs it took to **break 10 total seconds**, whichever was fewer.
 
-The LOH compressor/decompressor here is working across 4 cores for a ~2x speedup (empirically), so for serial applications multiply LOH's time numbers by 2.
+The LOH compressor/decompressor here is working across 4 cores for a 1.5x~2x speedup (empirically), so for serial applications multiply LOH's time numbers by 1.5~2.
 
 Name | Size | Compress time | Decompress time
 -|-|-|-
