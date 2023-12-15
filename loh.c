@@ -22,11 +22,7 @@ int main(int argc, char ** argv)
         puts("The first turns on lookback, with different numbers corresponding to\n"
             "different compression qualities. The default value is 4, which is\n"
             "pretty low quality but fast enough to be reasonable. 1 means fastest,\n"
-            "9 means slowest. Increasing the compression level by 1 makes the lookback\n"
-            "compressor use double the extra memory of the previous compression level.\n"
-            "At level 4, it uses around 147 kilobytes of extra memory (default).\n"
-            "At level 9, it uses around 34 megabytes of extra memory.\n"
-            );
+            "9 means slowest.");
         puts("");
         puts("The second turns on Huffman coding.");
         puts("");
@@ -36,7 +32,7 @@ int main(int argc, char ** argv)
             "generally work well with most files, like text.");
         puts("");
         puts("If given, the numeric arguments must be given in order. If not given,\n"
-            "their defaults are 4, 1, 0. In other words, RLE and Huffman are enabled\n"
+            "their defaults are 5, 1, 0. In other words, RLE and Huffman are enabled\n"
             "by default, but delta coding is not.");
         puts("");
         puts("Lookback and huffman are disabled for chunks of file that don't benefit.");
@@ -61,7 +57,7 @@ int main(int argc, char ** argv)
     if (argv[1][0] == 'z')
     {
         uint8_t do_diff = 0;
-        int8_t do_lookback = 4;
+        int8_t do_lookback = 5;
         uint8_t do_huff = 1;
         
         if (argc > 4)
