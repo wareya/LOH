@@ -225,7 +225,6 @@ static uint8_t * loh_compress_threaded(uint8_t * data, size_t len, uint8_t do_lo
         
         pthread_join(thread_table[i], 0);
         
-        // join thread
         loh_compress_threaded_args * ret = &thread_args[i];
         
         byte_push(&real_buf, ret->do_diff);

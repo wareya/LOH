@@ -199,110 +199,114 @@ static uint32_t loh_checksum(uint8_t * data, size_t len)
 
 static const size_t loh_min_lookback_length = 4;
 
-// for finding lookback matches, we use a fast quasi-lru cache based on a hash table
-// collisions and identical matches share eviction; the number of values per hash is static
+#ifndef LOH_LOW_MEMORY
+#define LOH_HASH_SIZE (20)
+#define LOH_PREVLINK_SIZE (20) // 1m
+#else
+#ifndef LOH_ULTRA_LOW_MEMORY
+#define LOH_HASH_SIZE (18)
+#define LOH_PREVLINK_SIZE (18) // ~256k
+#else
+#define LOH_HASH_SIZE (15)
+#define LOH_PREVLINK_SIZE (15) // ~32k
+#endif
+#endif
 
+// for finding lookback matches, we use a chained hash table with limited, location-based chaining
 typedef struct {
-    // table of hash (hashed four bytes) to value (address in file)
-    // we have 2<<n cells per hash
-    uint64_t * hashtable;
-    // overwriting cursor
-    uint8_t * hashtable_i;
-    // size of the hash function output in bits.
-    // must be at most 32, but values significantly above 16 are a Bad Idea.
-    // higher values take up exponentially more memory.
-    // default: 15
-    uint8_t hash_size;
-    // log2 of the number of values per key (0 -> 1 value per key, 1 -> 2, 2 -> 4, 3 -> 8, 4 -> 16, etc)
-    // higher values are slower, but result in smaller files. 8 is the max.
-    // higher values take up exponentially more memory and are exponentially slower.
-    // default: 2
-    uint8_t hash_shl;
-    uint16_t hash_i_max;
-    uint16_t hash_i_mask;
+    uint32_t * hashtable;
+    uint32_t * prevlink;
+    uint32_t max_distance;
+    uint16_t chain_len;
 } loh_hashmap;
 
+#define loh_prevlink_mask ((1<<LOH_PREVLINK_SIZE) - 1)
+
 #define LOH_HASH_LENGTH 4
-static inline uint32_t hashmap_hash(loh_hashmap * hashmap, const uint8_t * bytes)
+static inline uint32_t hashmap_hash_raw(const void * bytes)
 {
     // hashing function (can be anything; go ahead and optimize it as long as it doesn't result in tons of collisions)
-    uint32_t temp = 0xA68BF0C7;
+    uint32_t temp = 0xA68BB0D5;
     // unaligned-safe 32-bit load
-    uint32_t a = bytes[0];
-    a |= ((uint32_t)bytes[0]) << 0;
-    a |= ((uint32_t)bytes[1]) << 8;
-    a |= ((uint32_t)bytes[2]) << 16;
-    a |= ((uint32_t)bytes[3]) << 24;
+    uint32_t a = 0;
+    memcpy(&a, bytes, 4);
     // then just multiply it by the const and return the top N bits
-    temp *= a;
-    return temp >> (32 - hashmap->hash_size);
+    return a * temp;
+}
+static inline uint32_t hashmap_hash(const void * bytes)
+{
+    return hashmap_hash_raw(bytes) >> (32 - LOH_HASH_SIZE);
+}
+static inline uint32_t loh_hashlink_index(uint64_t value)
+{
+    return value & loh_prevlink_mask;
 }
 
 // bytes must point to four characters
 static inline void hashmap_insert(loh_hashmap * hashmap, const uint8_t * bytes, uint64_t value)
 {
-    const uint32_t key_i = hashmap_hash(hashmap, bytes);
-    const uint32_t key = key_i << hashmap->hash_shl;
-    
-    hashmap->hashtable[key + hashmap->hashtable_i[key_i]] = value;
-    hashmap->hashtable_i[key_i] = (hashmap->hashtable_i[key_i] + 1) & hashmap->hash_i_mask;
+    const uint32_t key = hashmap_hash(bytes);
+    hashmap->prevlink[loh_hashlink_index(value)] = hashmap->hashtable[key];
+    hashmap->hashtable[key] = value;
 }
 
 // bytes must point to four characters and be inside of buffer
 static inline uint64_t hashmap_get(loh_hashmap * hashmap, size_t i, const uint8_t * input, const size_t buffer_len, const size_t pre_context, uint64_t * min_len, size_t * back_distance)
 {
-    const uint8_t * bytes = &input[i];
-    const uint32_t key_i = hashmap_hash(hashmap, bytes);
-    const uint32_t key = key_i << hashmap->hash_shl;
+    const uint32_t key = hashmap_hash(&input[i]);
+    uint64_t value = hashmap->hashtable[key];
+    // file might be more than 4gb, so map in the upper bits of the current address
+    if (sizeof(size_t) > sizeof(uint32_t))
+        value |= i & 0xFFFFFFFF00000000;
+    if (!value)
+        return -1;
     
-    // find longest match
     // if we hit 128 bytes we call it good enough and take it
     const uint64_t good_enough_length = 128;
     uint64_t remaining = buffer_len - i;
     
-    // look for match within key
+    // look for best match under key
     uint64_t best = -1;
     uint64_t best_size = loh_min_lookback_length - 1;
     uint64_t best_d = 0;
-    for (uint16_t j = 0; j < hashmap->hash_i_max; j++)
+    uint64_t first_value = value;
+    uint16_t chain_len = hashmap->chain_len;
+    while (chain_len-- > 0)
     {
-        // cycle from newest to oldest
-        int n = (hashmap->hashtable_i[key_i] + hashmap->hash_i_max - 1 - j) & hashmap->hash_i_mask;
-        uint64_t value = hashmap->hashtable[key + n];
-        
-        if (value >= i)
-            break;
-        if (i - value > 1000000)
-            break;
-        
-        // early-out for things that probably aren't going to be an (efficient) match
-        // (because of backwardsing, shorter rightwards matches are sometimes longer... but not often)
-        if (bytes[0] != input[value] || bytes[1] != input[value + 1]
-            || (best_size >= 2 && (bytes[best_size - 1] != input[value + best_size - 1] || bytes[best_size - 2] != input[value + best_size - 2])))
-            continue;
-        
-        uint64_t size = 0;
-        while (size < remaining && bytes[size] == input[value + size])
-            size += 1;
-        
-        size_t d = 1;
-        while (value > 0 && input[i - d] == input[value - 1] && d <= pre_context)
+        if (memcmp(&input[i], &input[value], 4) == 0 && input[i + best_size] == input[value + best_size])
         {
-            value -= 1;
-            size += 1;
-            d += 1;
-        }
-        d -= 1;
-        
-        if (size > best_size || (size == best_size && value > best))
-        {
-            best_size = size;
-            best = value;
-            best_d = d;
+            uint64_t size = 0;
+            while (size < remaining && input[i + size] == input[value + size])
+                size += 1;
             
-            if (size >= good_enough_length || size >= remaining)
-                break;
+            size_t d = 1;
+            while (value > 0 && input[i - d] == input[value - 1] && d <= pre_context)
+            {
+                value -= 1;
+                size += 1;
+                d += 1;
+            }
+            d -= 1;
+            
+            if (size > best_size || (size == best_size && value > best))
+            {
+                best_size = size;
+                best = value;
+                best_d = d;
+                
+                if (size >= good_enough_length || size >= remaining)
+                    break;
+            }
         }
+        value = hashmap->prevlink[loh_hashlink_index(value)];
+        if (sizeof(size_t) > sizeof(uint32_t))
+            value |= i & 0xFFFFFFFF00000000;
+        
+        if (value == 0 || value > i || value == first_value || i - value > hashmap->max_distance)
+            break;
+        const uint32_t key_2 = hashmap_hash(&input[value]);
+        if (key_2 != key)
+            break;
     }
     
     *min_len = best_size;
@@ -363,49 +367,15 @@ static inline uint64_t hashmap_get_if_efficient(loh_hashmap * hashmap, const siz
 
 static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_len, int8_t quality_level)
 {
-    uint8_t hash_size = 13;
-    uint8_t hash_shl = 0;
-    if (quality_level > 15)
-        quality_level = 15;
-    if (quality_level < -10)
-        quality_level = -10;
-    if (quality_level > 0)
-    {
-        hash_size += (quality_level + 1) / 2;
-        hash_shl += quality_level / 2;
-    }
-    else
-    {
-        quality_level += 1;
-        hash_size += quality_level;
-    }
-    size_t hash_capacity = ((size_t)1) << (hash_size + hash_shl);
-    size_t hash_i_capacity = ((size_t)1) << hash_size;
-    
-    loh_byte_buffer ret = {0, 0, 0};
-    
     loh_hashmap hashmap;
-    
-    hashmap.hashtable = (uint64_t *)LOH_MALLOC(sizeof(uint64_t) * hash_capacity);
-    if (!hashmap.hashtable)
-        return ret;
-    
-    printf("%lld %lld\n", sizeof(uint64_t) * hash_capacity, sizeof(uint8_t) * hash_i_capacity);
-    
-    hashmap.hashtable_i = (uint8_t *)LOH_MALLOC(sizeof(uint8_t) * hash_i_capacity);
-    if (!hashmap.hashtable_i)
-    {
-        LOH_FREE(hashmap.hashtable);
-        return ret;
-    }
-    
-    hashmap.hash_size = hash_size;
-    hashmap.hash_shl = hash_shl;
-    hashmap.hash_i_max = (1 << hash_shl);
-    hashmap.hash_i_mask = (1 << hash_shl) - 1;
-    
-    memset(hashmap.hashtable, 0, sizeof(uint64_t) * hash_capacity);
-    memset(hashmap.hashtable_i, 0, sizeof(uint8_t) * hash_i_capacity);
+    hashmap.hashtable = (uint32_t *)LOH_MALLOC(sizeof(uint32_t *) * (1 << LOH_HASH_SIZE));
+    hashmap.prevlink = (uint32_t *)LOH_MALLOC(sizeof(uint32_t *) * (1 << LOH_PREVLINK_SIZE));
+    memset(hashmap.hashtable, 0, sizeof(uint32_t *) * (1 << LOH_HASH_SIZE));
+    memset(hashmap.prevlink, 0, sizeof(uint32_t *) * (1 << LOH_PREVLINK_SIZE));
+    hashmap.chain_len = (1 << (quality_level - 1));
+    hashmap.max_distance = (1 << (quality_level + 12));
+
+    loh_byte_buffer ret = {0, 0, 0};
     
     byte_push(&ret, input_len & 0xFF);
     byte_push(&ret, (input_len >> 8) & 0xFF);
@@ -422,6 +392,76 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
     uint64_t found_loc = 0;
     while (i < input_len)
     {
+        // store a literal if we found no lookback
+        uint64_t size = 0;
+        while (i + size < input_len)
+        {
+            size_t back_distance = 0;
+            if (i + size + LOH_HASH_LENGTH < input_len)
+                found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size, &found_size, &back_distance);
+            if (found_size != 0)
+            {
+                // zlib-style "lazy" search: only confirm the match if the next byte isn't a good match too
+                if (found_size < 64 && i + size + 1 + LOH_HASH_LENGTH < input_len)
+                {
+                    uint64_t found_size_2 = 0;
+                    size_t back_distance_2 = 0;
+                    uint64_t found_loc_2 = hashmap_get_if_efficient(&hashmap, i + size + 1, input, input_len, size + 1, &found_size_2, &back_distance_2);
+                    if (found_size_2 >= found_size + 1)
+                    {
+                        size += 1;
+                        found_loc = found_loc_2;
+                        found_size = found_size_2;
+                        back_distance = back_distance_2;
+                    }
+                }
+                if (found_size != 0)
+                {
+                    size -= back_distance;
+                    break;
+                }
+            }
+            // need to update the hashmap mid-literal
+            if (i + size + LOH_HASH_LENGTH < input_len)
+                hashmap_insert(&hashmap, &input[i + size], i + size);
+            size += 1;
+        }
+        
+        if (size > input_len - i)
+            size = input_len - i;
+        
+        if (size != 0)
+        {
+            size_t write_size = size - 1;
+            
+            size_t size_max = 0;
+            size_t size_max_next = loh_size_mask + 1;
+            size_t size_byte_count = 1;
+            size_t size_bit_count = loh_size_bits;
+            while (write_size >= size_max_next)
+            {
+                size_max = size_max_next;
+                size_bit_count += 7;
+                size_max_next += ((uint64_t)1) << size_bit_count;
+                size_byte_count += 1;
+            }
+            write_size -= size_max;
+            
+            uint8_t head_byte = 0;
+            head_byte |= ((write_size & loh_size_mask) << 1) | (size_byte_count > 1);
+            write_size >>= loh_size_bits;
+            
+            byte_push(&ret, head_byte);
+            
+            for (size_t n = 1; n < size_byte_count; n++)
+            {
+                byte_push(&ret, ((write_size & 0x7F) << 1) | (n + 1 < size_byte_count));
+                write_size >>= 7;
+            }
+            
+            bytes_push(&ret, &input[i], size);
+            i += size;
+        }
         // check for lookback hit
         if (found_size != 0)
         {
@@ -438,8 +478,6 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
             // advance cursor and update hashmap
             uint64_t start_i = i;
             i += 1;
-            uint64_t temp_loc = 0;
-            uint64_t temp_size = 0;
             for (size_t j = 1; j < found_size; j++)
             {
                 if (i + LOH_HASH_LENGTH < input_len)
@@ -448,7 +486,6 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
             }
             if (start_i + LOH_HASH_LENGTH < input_len)
                 hashmap_insert(&hashmap, &input[start_i], start_i);
-            
             
             size_t write_size = found_size - loh_min_lookback_length;
             
@@ -500,90 +537,10 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
             }
             
             found_size = 0;
-            
-            if (temp_size)
-            {
-                found_loc = temp_loc;
-                found_size = temp_size;
-                continue;
-            }
         }
-        
-        // store a literal if we found no lookback
-        uint64_t size = 0;
-        while (i + size < input_len)
-        {
-            size_t back_distance = 0;
-            if (i + size + LOH_HASH_LENGTH < input_len)
-                found_loc = hashmap_get_if_efficient(&hashmap, i + size, input, input_len, size, &found_size, &back_distance);
-            if (found_size != 0)
-            {
-                uint64_t start_size = size;
-                // zlib-style "lazy" search: only confirm the match if the next byte isn't a good match too
-                if (found_size < 64 && i + start_size + 1 + LOH_HASH_LENGTH < input_len)
-                {
-                    uint64_t found_size_2 = 0;
-                    size_t back_distance_2 = 0;
-                    uint64_t found_loc_2 = hashmap_get_if_efficient(&hashmap, i + start_size + 1, input, input_len, start_size + 1, &found_size_2, &back_distance_2);
-                    if (found_size_2 >= found_size + 1)
-                    {
-                        size = start_size + 1;
-                        found_loc = found_loc_2;
-                        found_size = found_size_2;
-                        back_distance = back_distance_2;
-                    }
-                }
-                if (found_size != 0)
-                {
-                    size -= back_distance;
-                    break;
-                }
-            }
-            // need to update the hashmap mid-literal
-            if (i + size + LOH_HASH_LENGTH < input_len)
-                hashmap_insert(&hashmap, &input[i + size], i + size);
-            size += 1;
-        }
-        
-        if (size > input_len - i)
-            size = input_len - i;
-        
-        if (size == 0)
-            continue;
-        
-        size_t write_size = size - 1;
-        
-        size_t size_max = 0;
-        size_t size_max_next = loh_size_mask + 1;
-        size_t size_byte_count = 1;
-        size_t size_bit_count = loh_size_bits;
-        while (write_size >= size_max_next)
-        {
-            size_max = size_max_next;
-            size_bit_count += 7;
-            size_max_next += ((uint64_t)1) << size_bit_count;
-            size_byte_count += 1;
-        }
-        write_size -= size_max;
-        
-        uint8_t head_byte = 0;
-        head_byte |= ((write_size & loh_size_mask) << 1) | (size_byte_count > 1);
-        write_size >>= loh_size_bits;
-        
-        byte_push(&ret, head_byte);
-        
-        for (size_t n = 1; n < size_byte_count; n++)
-        {
-            byte_push(&ret, ((write_size & 0x7F) << 1) | (n + 1 < size_byte_count));
-            write_size >>= 7;
-        }
-        
-        bytes_push(&ret, &input[i], size);
-        i += size;
     }
-    
     LOH_FREE(hashmap.hashtable);
-    LOH_FREE(hashmap.hashtable_i);
+    LOH_FREE(hashmap.prevlink);
     
     return ret;
 }
@@ -973,6 +930,9 @@ static loh_bit_buffer huff_pack(uint8_t * data, size_t len)
 static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, uint8_t do_huff, uint8_t do_diff, size_t * out_len)
 {
     if (!data || !out_len) return 0;
+    
+    if (do_lookback > 12)
+        do_lookback = 12;
     
     uint32_t checksum = loh_checksum(data, len);
     
