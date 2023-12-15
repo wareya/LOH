@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #ifndef THREADED
-#include "loh_impl.h"
+#include "loh_lite.h"
 #else
 #include "loh_impl_threaded.h"
 #endif
@@ -36,7 +36,7 @@ int main(int argc, char ** argv)
             "generally work well with most files, like text.");
         puts("");
         puts("If given, the numeric arguments must be given in order. If not given,\n"
-            "their defaults are 1, 1, 0. In other words, RLE and Huffman are enabled\n"
+            "their defaults are 4, 1, 0. In other words, RLE and Huffman are enabled\n"
             "by default, but delta coding is not.");
         puts("");
         puts("Lookback and huffman are disabled for chunks of file that don't benefit.");
