@@ -24,11 +24,13 @@ Made with the gzip, lz4, brotli, and zstd commands, and loh.c compiled as -O3 (w
 
 Times are the **average of 5 runs** or however many runs it took to **break 10 total seconds**, whichever was fewer.
 
+The LOH compressor/decompressor here is working across 4 cores for a ~2x speedup (empirically), so for serial applications multiply LOH's time numbers by 2.
+
 Name | Size | Compress time | Decompress time
 -|-|-|-
 data/cc0_photo.tga | 3728 KB | - | -
-data/cc0_photo.tga.loh | **2051 KB** | **0.096s** | 0.047s
-data/cc0_photo.tga.-9.loh | **2051 KB** | 0.247s | 0.045s
+data/cc0_photo.tga.loh | **2051 KB** | **0.123s** | 0.024s
+data/cc0_photo.tga.-9.loh | **2051 KB** | 0.449s | 0.023s
 data/cc0_photo.tga.-5.gz | 2473 KB | 0.167s | 0.029s
 data/cc0_photo.tga.-9.gz | 2466 KB | 0.254s | 0.041s
 data/cc0_photo.tga.-5.lz4 | 2777 KB | 0.129s | **0.011s**
@@ -37,18 +39,18 @@ data/cc0_photo.tga.-19.zst | 2328 KB | 0.919s | 0.018s
 data/cc0_photo.tga.-11.br | 2069 KB | 11.63s | 0.044s
 -|-|-|-
 data/blake recorded 11.wav | 27002 KB | - | -
-data/blake recorded 11.wav.loh | **24270 KB** | **0.63s** | 0.276s
-data/blake recorded 11.wav.-9.loh | **24270 KB** | 5.002s | 0.339s
+data/blake recorded 11.wav.loh | **24270 KB** | 0.908s | 0.139s
+data/blake recorded 11.wav.-9.loh | **24270 KB** | 1.914s | 0.128s
 data/blake recorded 11.wav.-5.gz | 25920 KB | 0.85s | 0.194s
 data/blake recorded 11.wav.-9.gz | 25910 KB | 1.112s | 0.19s
 data/blake recorded 11.wav.-5.lz4 | 26404 KB | 0.718s | 0.079s
-data/blake recorded 11.wav.-9.lz4 | 26375 KB | 0.807s | 0.075s
+data/blake recorded 11.wav.-9.lz4 | 26375 KB | **0.807s** | 0.075s
 data/blake recorded 11.wav.-19.zst | 26130 KB | 8.425s | **0.034s**
 data/blake recorded 11.wav.-11.br | 25268 KB | 88.658s | 0.308s
 -|-|-|-
 data/moby dick.txt | 1246 KB | - | -
-data/moby dick.txt.loh | 600 KB | **0.043s** | 0.02s
-data/moby dick.txt.-9.loh | 575 KB | 0.147s | 0.02s
+data/moby dick.txt.loh | 576 KB | **0.038s** | 0.009s
+data/moby dick.txt.-9.loh | 563 KB | 0.079s | 0.009s
 data/moby dick.txt.-5.gz | 508 KB | 0.065s | 0.01s
 data/moby dick.txt.-9.gz | 499 KB | 0.127s | 0.013s
 data/moby dick.txt.-5.lz4 | 591 KB | 0.045s | 0.007s
@@ -57,8 +59,8 @@ data/moby dick.txt.-19.zst | 412 KB | 0.544s | **0.005s**
 data/moby dick.txt.-11.br | **403 KB** | 2.21s | 0.009s
 -|-|-|-
 data/oops all zeroes.bin | 27002 KB | - | -
-data/oops all zeroes.bin.loh | 168 Bytes | 0.134s | 0.116s
-data/oops all zeroes.bin.-9.loh | 168 Bytes | 0.112s | 0.105s
+data/oops all zeroes.bin.loh | 168 Bytes | 0.042s | 0.07s
+data/oops all zeroes.bin.-9.loh | 168 Bytes | 0.041s | 0.066s
 data/oops all zeroes.bin.-5.gz | 26 KB | 0.126s | 0.132s
 data/oops all zeroes.bin.-9.gz | 26 KB | 0.139s | 0.131s
 data/oops all zeroes.bin.-5.lz4 | 106 KB | **0.024s** | 0.026s
@@ -67,18 +69,18 @@ data/oops all zeroes.bin.-19.zst | 866 Bytes | 0.045s | **0.01s**
 data/oops all zeroes.bin.-11.br | **27 Bytes** | 0.549s | 0.103s
 -|-|-|-
 data/white noise.bin | **27002 KB** | - | -
-data/white noise.bin.loh | 27002 KB | **0.441s** | 0.053s
-data/white noise.bin.-9.loh | 27002 KB | 2.63s | 0.055s
+data/white noise.bin.loh | 27002 KB | 0.851s | 0.061s
+data/white noise.bin.-9.loh | 27002 KB | 1.694s | 0.081s
 data/white noise.bin.-5.gz | 27006 KB | 0.781s | 0.157s
 data/white noise.bin.-9.gz | 27006 KB | 0.773s | 0.153s
-data/white noise.bin.-5.lz4 | 27002 KB | 0.711s | 0.07s
+data/white noise.bin.-5.lz4 | 27002 KB | **0.711s** | 0.07s
 data/white noise.bin.-9.lz4 | 27002 KB | 0.731s | 0.067s
 data/white noise.bin.-19.zst | 27003 KB | 8.38s | **0.038s**
 data/white noise.bin.-11.br | 27002 KB | 44.384s | 0.064s
 -|-|-|-
 data/Godot_v4.1.3-stable_win64.exe | 117559 KB | - | -
-data/Godot_v4.1.3-stable_win64.exe.loh | 58521 KB | **2.864s** | 1.33s
-data/Godot_v4.1.3-stable_win64.exe.-9.loh | 56696 KB | 17.759s | 1.293s
+data/Godot_v4.1.3-stable_win64.exe.loh | 56663 KB | **2.726s** | 0.593s
+data/Godot_v4.1.3-stable_win64.exe.-9.loh | 55817 KB | 15.315s | 0.687s
 data/Godot_v4.1.3-stable_win64.exe.-5.gz | 54154 KB | 3.775s | 0.764s
 data/Godot_v4.1.3-stable_win64.exe.-9.gz | 53650 KB | 10.613s | 0.739s
 data/Godot_v4.1.3-stable_win64.exe.-5.lz4 | 60631 KB | 2.389s | 0.387s
@@ -87,8 +89,8 @@ data/Godot_v4.1.3-stable_win64.exe.-19.zst | 45147 KB | 61.172s | **0.276s**
 data/Godot_v4.1.3-stable_win64.exe.-11.br | **42549 KB** | 368.713s | 0.907s
 -|-|-|-
 data/unifont-jp.tga | 65537 KB | - | -
-data/unifont-jp.tga.loh | 2963 KB | **0.467s** | 0.245s
-data/unifont-jp.tga.-9.loh | 2088 KB | 0.599s | 0.211s
+data/unifont-jp.tga.loh | 2226 KB | **0.288s** | 0.149s
+data/unifont-jp.tga.-9.loh | 1768 KB | 0.947s | 0.136s
 data/unifont-jp.tga.-5.gz | 2223 KB | 0.554s | 0.229s
 data/unifont-jp.tga.-9.gz | 1492 KB | 16.069s | 0.203s
 data/unifont-jp.tga.-5.lz4 | 4679 KB | 0.655s | 0.139s
@@ -97,42 +99,6 @@ data/unifont-jp.tga.-19.zst | 1258 KB | 20.619s | **0.072s**
 data/unifont-jp.tga.-11.br | **1055 KB** | 153.028s | 0.156s
 
 (LZ4 has a maximum compression ratio of 1:256-ish, because of how it stores long integers.)
-
-### Threaded time results
-
-Operating with four threads, which is the default (hardcoded) number of chunks.
-
-Name | Size | Compress time | Decompress time
--|-|-|-
-data/cc0_photo.tga | 3728 KB | - | -
-data/cc0_photo.tga.loh | 2051 KB | 0.071s | 0.02s
-data/cc0_photo.tga.-9.loh | 2051 KB | 0.296s | 0.019s
--|-|-|-
-data/blake recorded 11.wav | 27002 KB | - | -
-data/blake recorded 11.wav.loh | 24270 KB | 0.47s | 0.14s
-data/blake recorded 11.wav.-9.loh | 24270 KB | 3.448s | 0.156s
--|-|-|-
-data/moby dick.txt | 1246 KB | - | -
-data/moby dick.txt.loh | 600 KB | 0.029s | 0.012s
-data/moby dick.txt.-9.loh | 575 KB | 0.085s | 0.008s
--|-|-|-
-data/oops all zeroes.bin | 27002 KB | - | -
-data/oops all zeroes.bin.loh | 168 Bytes | 0.061s | 0.083s
-data/oops all zeroes.bin.-9.loh | 168 Bytes | 0.07s | 0.073s
--|-|-|-
-data/white noise.bin | 27002 KB | - | -
-data/white noise.bin.loh | 27002 KB | 0.398s | 0.052s
-data/white noise.bin.-9.loh | 27002 KB | 3.469s | 0.069s
--|-|-|-
-data/Godot_v4.1.3-stable_win64.exe | 117559 KB | - | -
-data/Godot_v4.1.3-stable_win64.exe.loh | 58521 KB | 1.451s | 0.637s
-data/Godot_v4.1.3-stable_win64.exe.-9.loh | 56696 KB | 8.701s | 0.685s
--|-|-|-
-data/unifont-jp.tga | 65537 KB | - | -
-data/unifont-jp.tga.loh | 2963 KB | 0.245s | 0.162s
-data/unifont-jp.tga.-9.loh | 2088 KB | 0.261s | 0.156s
-
-As explained in the first section, this is purely a proof of concept; it still loads the entire file to memory all at once on a single thread before compressing or decompressing it. This is the main reason why decompression isn't 4x as fast with threading enabled.
 
 ## Format
 
