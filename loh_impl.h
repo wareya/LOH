@@ -995,6 +995,7 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
     byte_push(&ret, (input_len >> 56) & 0xFF);
     
     uint64_t i = 0;
+    uint64_t last_real_size = -1;
     while (i < input_len)
     {
         uint64_t size = 0; // size of literal
@@ -1041,7 +1042,7 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
         lb_size -= loh_min_lookback_length;
         uint64_t dist = i + real_size - lb_loc;
         
-        if (real_size != 0)
+        if (real_size != last_real_size)
         {
             byte_push(&ret, ((size >= 0x7 ? 0x7 : size) << 5) | ((lb_size >= 0xF ? 0xF : lb_size) << 1) | 0);
             if (size >= 0x7)
@@ -1054,8 +1055,6 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
                 lb_size -= 0xF;
                 var_len_push(&ret, lb_size);
             }
-            
-            var_len_push(&ret, dist);
         }
         else
         {
@@ -1065,8 +1064,11 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
                 lb_size -= 0x7F;
                 var_len_push(&ret, lb_size);
             }
-            var_len_push(&ret, dist);
         }
+        
+        var_len_push(&ret, dist);
+        
+        last_real_size = real_size;
         
         // write literal and advance cursor
         if (real_size != 0)
@@ -1134,43 +1136,70 @@ static loh_byte_buffer lookback_decompress(const uint8_t * input, size_t input_l
 #define _LOH_CHECK_I_VS_LEN_OR_RETURN(N) \
     if (i + N > input_len) return *error = 1, ret;
 
+    size_t last_size = 0;
     while (i < input_len)
     {
         //printf("%lld\n", i);
+        size_t size = last_size;
+        size_t lb_size = 0;
+        size_t dist = 0;
+        uint64_t n = 0;
         
         uint8_t dat = input[i++];
         
-        size_t size = dat & 0xF;
-        uint8_t size_continues = size == 0xF;
-        uint64_t n = 0;
-        while (size_continues)
+        // same literal size as previous
+        if (dat & 1)
         {
-            //puts("size continues...");
-            _LOH_CHECK_I_VS_LEN_OR_RETURN(1)
-            uint64_t cont_dat = input[i++];
-            size_continues = cont_dat & 1;
-            size += ((cont_dat >> 1) << n);
-            if (n > 0) size += ((uint64_t)1) << n;
-            n += 7;
+            lb_size = dat >> 1;
+            uint8_t lb_size_continues = lb_size == 0x7F;
+            n = 0;
+            while (lb_size_continues)
+            {
+                //puts("lb size continues...");
+                _LOH_CHECK_I_VS_LEN_OR_RETURN(1)
+                uint64_t cont_dat = input[i++];
+                lb_size_continues = cont_dat & 1;
+                lb_size += ((cont_dat >> 1) << n);
+                if (n > 0) lb_size += ((uint64_t)1) << n;
+                n += 7;
+            }
         }
-        
-        size_t lb_size = dat >> 4;
-        uint8_t lb_size_continues = lb_size == 0xF;
-        n = 0;
-        while (lb_size_continues)
+        // new literal size
+        else
         {
-            //puts("lb size continues...");
-            _LOH_CHECK_I_VS_LEN_OR_RETURN(1)
-            uint64_t cont_dat = input[i++];
-            lb_size_continues = cont_dat & 1;
-            lb_size += ((cont_dat >> 1) << n);
-            if (n > 0) lb_size += ((uint64_t)1) << n;
-            n += 7;
+            size = dat >> 5;
+            uint8_t size_continues = size == 0x7;
+            n = 0;
+            while (size_continues)
+            {
+                //puts("size continues...");
+                _LOH_CHECK_I_VS_LEN_OR_RETURN(1)
+                uint64_t cont_dat = input[i++];
+                size_continues = cont_dat & 1;
+                size += ((cont_dat >> 1) << n);
+                if (n > 0) size += ((uint64_t)1) << n;
+                n += 7;
+            }
+            
+            lb_size = (dat >> 1) & 0xF;
+            uint8_t lb_size_continues = lb_size == 0xF;
+            n = 0;
+            while (lb_size_continues)
+            {
+                //puts("lb size continues...");
+                _LOH_CHECK_I_VS_LEN_OR_RETURN(1)
+                uint64_t cont_dat = input[i++];
+                lb_size_continues = cont_dat & 1;
+                lb_size += ((cont_dat >> 1) << n);
+                if (n > 0) lb_size += ((uint64_t)1) << n;
+                n += 7;
+            }
         }
+        last_size = size;
         
         _LOH_CHECK_I_VS_LEN_OR_RETURN(1)
         uint64_t dist_dat = input[i++];
-        uint64_t dist = dist_dat >> 1;
+        dist = dist_dat >> 1;
         uint8_t dist_continues = dist_dat & 1;
         n = 7;
         while (dist_continues)
