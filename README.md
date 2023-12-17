@@ -24,7 +24,7 @@ Made with the gzip, lz4, brotli, and zstd commands, and loh.c compiled as -O3 (w
 
 Times are the **average of 5 runs** or however many runs it took to **break 10 total seconds**, whichever was fewer.
 
-The LOH compressor/decompressor here is working across 4 cores for a ~2x speedup (empirically), so for serial applications multiply LOH's time numbers by 2.
+The LOH compressor/decompressor here is working across 4 cores for a 1.5x~2x speedup (empirically), so for serial applications multiply LOH's time numbers by 1.5~2.
 
 Name | Size | Compress time | Decompress time
 -|-|-|-
@@ -79,11 +79,11 @@ data/white noise.bin.-19.zst | 27003 KB | 8.38s | **0.038s**
 data/white noise.bin.-11.br | 27002 KB | 44.384s | 0.064s
 -|-|-|-
 data/Godot_v4.1.3-stable_win64.exe | 117559 KB | - | -
-data/Godot_v4.1.3-stable_win64.exe.loh | 56663 KB | **2.726s** | 0.593s
+data/Godot_v4.1.3-stable_win64.exe.loh | 56663 KB | 2.726s | 0.593s
 data/Godot_v4.1.3-stable_win64.exe.-9.loh | 55817 KB | 15.315s | 0.687s
 data/Godot_v4.1.3-stable_win64.exe.-5.gz | 54154 KB | 3.775s | 0.764s
 data/Godot_v4.1.3-stable_win64.exe.-9.gz | 53650 KB | 10.613s | 0.739s
-data/Godot_v4.1.3-stable_win64.exe.-5.lz4 | 60631 KB | 2.389s | 0.387s
+data/Godot_v4.1.3-stable_win64.exe.-5.lz4 | 60631 KB | **2.389s** | 0.387s
 data/Godot_v4.1.3-stable_win64.exe.-9.lz4 | 60210 KB | 3.911s | 0.385s
 data/Godot_v4.1.3-stable_win64.exe.-19.zst | 45147 KB | 61.172s | **0.276s**
 data/Godot_v4.1.3-stable_win64.exe.-11.br | **42549 KB** | 368.713s | 0.907s
