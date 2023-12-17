@@ -116,6 +116,8 @@ Each step is applied to arbitrarily-sized chunks, which are listed by start loca
 
 ### Lookback
 
+(outdated, now a hybrid of this and LZ4, will rewrite later)
+
 The LZSS-style layer works strictly with bytes, not with a bitstream.
 
 Each byte instruction sequence defines a distance term and a length term. If the distance term is zero, the length term is interpreted as a number of literal bytes to decode (plus one), which follow the byte instruction sequence. If the distance term is not zero, then the length and distance are interpreted as a lookback command (with size plus four).
