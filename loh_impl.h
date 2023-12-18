@@ -931,7 +931,6 @@ static uint8_t * loh_compress(uint8_t * data, size_t len, uint8_t do_lookback, u
     return real_buf.data;
 }
 
-static int var_len_which = 0;
 static void var_len_push(loh_byte_buffer * buf, uint64_t n)
 {
     if (n == 0)
@@ -1042,13 +1041,11 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
             if (size >= 0x7)
             {
                 size -= 0x7;
-                var_len_which = 0;
                 var_len_push(&ret, size);
             }
             if (lb_size >= 0xF)
             {
                 lb_size -= 0xF;
-                var_len_which = 1;
                 var_len_push(&ret, lb_size);
             }
         }
@@ -1059,12 +1056,10 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
             if (lb_size >= 0x1F)
             {
                 lb_size -= 0x1F;
-                var_len_which = 2;
                 var_len_push(&ret, lb_size);
             }
         }
         
-        var_len_which = 3;
         var_len_push(&ret, dist);
         
         last_real_size = real_size;
@@ -1101,7 +1096,6 @@ static loh_byte_buffer lookback_compress(const uint8_t * input, uint64_t input_l
 
 // On error, the value poitned to by the error parameter will be set to 1.
 // Any partially-decompressed data is returned rather than being freed and nulled.
-const uint8_t * aaaaaa;
 static loh_byte_buffer lookback_decompress(const uint8_t * input, size_t input_len, int * error)
 {
     size_t i = 0;
@@ -1245,7 +1239,7 @@ static loh_byte_buffer lookback_decompress(const uint8_t * input, size_t input_l
             // bounds limit
             if (dist > ret.len)
             {
-                printf("bounds limit... %lld %lld %llX %llX\n", dist, ret.len, start_i + (size_t)(input - aaaaaa), i + (size_t)(input - aaaaaa));
+                //printf("bounds limit... %lld %lld %llX %llX\n", dist, ret.len, start_i + (size_t)(input - aaaaaa), i + (size_t)(input - aaaaaa));
                 *error = 1;
                 return ret;
             }
@@ -1487,7 +1481,6 @@ static uint8_t * loh_decompress(uint8_t * data, size_t len, size_t * out_len, ui
         if (do_lookback)
         {
             int error = 0;
-            aaaaaa = data;
             loh_byte_buffer new_buf = lookback_decompress(buf.data, buf.len, &error);
             if (buf.data != buf_orig)
                 LOH_FREE(buf.data);
