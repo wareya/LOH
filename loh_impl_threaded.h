@@ -154,12 +154,14 @@ static void * loh_compress_threaded_single(void * _args)
 
 // passed-in data is modified, but not stored; it still belongs to the caller, and must be freed by the caller
 // returned data must be freed by the caller; it was allocated with LOH_MALLOC
-static uint8_t * loh_compress_threaded(uint8_t * data, size_t len, uint8_t do_lookback, uint8_t do_huff, uint8_t do_diff, size_t * out_len, uint16_t threads)
+static uint8_t * loh_compress_threaded(uint8_t * data, size_t len, int8_t do_lookback, uint8_t do_huff, uint8_t do_diff, size_t * out_len, uint16_t threads)
 {
     if (!data || !out_len) return 0;
     
     if (do_lookback > 12)
         do_lookback = 12;
+    if (do_lookback < -12)
+        do_lookback = -12;
     
     uint32_t checksum = loh_checksum(data, len);
     
